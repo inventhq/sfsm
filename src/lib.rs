@@ -16,7 +16,7 @@
 //! - no_std compatibility
 //! - Self documenting
 //! - Easy to use
-//! - Efficient
+//! - Low cost
 //!
 //! Sfsm tries to achieve these objectives, by providing a state machine generator in sfsm-proc and
 //! a transition as well as state trait in sfsm-proc. With this, the user can specify the whole state
@@ -133,6 +133,15 @@
 //!     }
 //! }
 //! # impl Transition<EndState> for WaitingState {
+//! #    fn entry(&mut self) {
+//! #        println!("Waiting -> End: Enter");
+//! #    }
+//! #    fn execute(&mut self) {
+//! #        println!("Waiting -> End: Execute");
+//! #    }
+//! #    fn exit(&mut self) {
+//! #        println!("Waiting -> End: Exit");
+//! #    }
 //! #     fn guard(&self) -> bool {
 //! #         return self.counter == 2;
 //! #     }
@@ -189,14 +198,18 @@
 //! Init -> Waiting: Exit
 //! ****************************************
 //! Waiting: Enter
+//! Waiting -> End: Enter
 //! Waiting: Execute
+//! Waiting -> End: Execute
 //! Waiting: Execute
+//! Waiting -> End: Execute
 //! Waiting: Exit
+//! Waiting -> End: Exit
 //! ****************************************
 //! End: Enter
 //! End: Execute
 //!```
-//!
+//! For more detailed descriptions about the traits, look at the sfsm-base doc.
 
 pub extern crate sfsm_proc;
 pub extern crate sfsm_base;
