@@ -28,7 +28,7 @@
 //!
 //! # How to use
 //! To see the whole example, expand the source
-//!```
+//!```rust
 //! extern crate sfsm_proc;
 //! extern crate sfsm_base;
 //! use sfsm_proc::add_state_machine;
@@ -168,6 +168,7 @@
 //! #    state_message: state_message.clone(),
 //! };
 //!
+//! // Create the state machine with the name defined and pass the initial state into it.
 //! let mut sfsm = StaticSfms::new(init);
 //!
 //! sfsm.step();
