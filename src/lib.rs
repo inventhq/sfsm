@@ -72,6 +72,7 @@
 //! // ...
 //! # impl State for InitState {
 //! #     fn entry(&mut self) {
+//! #         println!("****************************************");
 //! #         println!("Init: Enter");
 //! #     }
 //! #     fn execute(&mut self) {
@@ -81,11 +82,11 @@
 //! #     }
 //! #     fn exit(&mut self) {
 //! #         println!("Init: Exit");
-//! #         println!("****************************************");
 //! #     }
 //! # }
 //! impl State for WaitingState {
 //!     fn entry(&mut self) {
+//!         println!("****************************************");
 //!         println!("Waiting: Enter");
 //!     }
 //!     fn execute(&mut self) {
@@ -96,12 +97,12 @@
 //!     }
 //!     fn exit(&mut self) {
 //!         println!("Waiting: Exit");
-//!         println!("****************************************");
 //!     }
 //! }
 //!
 //! # impl State for EndState {
 //! #     fn entry(&mut self) {
+//! #         println!("****************************************");
 //! #         println!("End: Enter");
 //! #     }
 //! #     fn execute(&mut self) {
@@ -111,7 +112,6 @@
 //! #     }
 //! #     fn exit(&mut self) {
 //! #         println!("End: Exit");
-//! #         println!("****************************************");
 //! #     }
 //! # }
 //! // ...
@@ -178,7 +178,24 @@
 //! # assert_eq!(msg, "EndState".to_string());
 //!
 //!```
-//!
+//! This will then produce the following output:
+//!```text
+//! ****************************************
+//! Init: Enter
+//! Init -> Waiting: Enter
+//! Init: Execute
+//! Init -> Waiting: Execute
+//! Init: Exit
+//! Init -> Waiting: Exit
+//! ****************************************
+//! Waiting: Enter
+//! Waiting: Execute
+//! Waiting: Execute
+//! Waiting: Exit
+//! ****************************************
+//! End: Enter
+//! End: Execute
+//!```
 //!
 
 pub extern crate sfsm_proc;
