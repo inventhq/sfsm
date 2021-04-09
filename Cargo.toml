@@ -3,9 +3,12 @@ name = "sfsm"
 version = "0.1.0"
 authors = ["Samuel Schuepbach <schuepbs@gmail.com>"]
 edition = "2018"
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+license-file = "LICENSE"
+readme = "README.rst"
+keywords = ["static", "state-machine", "no_std", "embedded"]
+repository = "https://gitlab.com/sfsm/sfsm"
+description = "Generate static state machines"
 
 [dependencies]
-sfsm-base = {path = '../sfsm-base'}
-sfsm-proc = {path = '../sfsm-proc'}
+sfsm-base = "0.1.0"
+sfsm-proc = "0.1.0"
