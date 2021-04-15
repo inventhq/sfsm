@@ -183,10 +183,36 @@
 //! # let msg = state_message.borrow().clone();
 //! # assert_eq!(msg, "WaitingState".to_string());
 //!
+//! // If you want to check which state the machine currently is in, you can peak it.
+//! // Note that the generated enum will be named: [CHOOSEN_NAME_OF_SFSM]States and the entries
+//! // will be called [NAME_OF_STRUCT]State
+//! match sfsm.peak_state() {
+//!     StaticSfmsStates::WaitingStateState(_) => {
+//!         assert!(true);
+//!     }
+//! _ => {
+//!         assert!(false);
+//!     }
+//! }
+//!
 //! sfsm.step();
 //! # let msg = state_message.borrow().clone();
 //! # assert_eq!(msg, "EndState".to_string());
 //!
+//! # let msg = state_message.borrow().clone();
+//! # assert_eq!(msg, "EndState".to_string());
+//!
+//! // Once you are done using the state machine, you can stop it and return the current state.
+//! let exit = sfsm.stop();
+//!
+//! match exit {
+//!     StaticSfmsStates::EndStateState(_) => {
+//!         assert!(true);
+//!     }
+//! _ => {
+//!         assert!(false);
+//!     }
+//! }
 //!```
 //! This will then produce the following output:
 //!```text
