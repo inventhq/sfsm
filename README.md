@@ -1,5 +1,4 @@
-Static finite state machine
--------------------------
+# Static finite state machine
 
 State machines are a existential part of many software architectures and are particularly
 common on low level systems such as embedded systems. They allow a complicated system to be

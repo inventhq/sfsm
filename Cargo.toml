@@ -1,14 +1,14 @@
 [package]
 name = "sfsm"
-version = "0.1.0"
+version = "0.1.1"
 authors = ["Samuel Schuepbach <schuepbs@gmail.com>"]
 edition = "2018"
-license-file = "LICENSE"
-readme = "README.rst"
+license = "MIT"
+readme = "README.md"
 keywords = ["static", "state-machine", "no_std", "embedded"]
 repository = "https://gitlab.com/sfsm/sfsm"
 description = "Generate static state machines"
 
 [dependencies]
-sfsm-base = "0.1.0"
-sfsm-proc = "0.1.0"
+sfsm-base = "0.1.1"
+sfsm-proc = "0.1.1"
