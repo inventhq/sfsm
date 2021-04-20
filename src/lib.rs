@@ -32,187 +32,158 @@
 //! extern crate sfsm_proc;
 //! extern crate sfsm_base;
 //! use sfsm_proc::add_state_machine;
+//! use sfsm_base::{is_state, State, Transition};
+//! use std::marker::PhantomData;
 //!
 //! // To start out, first define the state machine.
 //! add_state_machine!(
-//!    StaticSfms,  // Name of the state machine. Used to run it later
-//!    InitState,   // The initial state the state machine will start with
+//!    Hiker,  // Name of the state machine. Used to run it later
+//!    Hike<Up>,   // The initial state the state machine will start with
 //!    [
 //!         // Define all states. These states must correspond to a struct
-//!         InitState,
-//!         EndState,
-//!         WaitingState
+//!         Hike<Up>,
+//!         Hike<Down>,
+//!         Picknick
 //!    ],
 //!    [
 //!         // Define all transitions with: Src -> Dst
-//!         InitState -> WaitingState,
-//!         WaitingState -> EndState
+//!         Hike<Up> -> Picknick,
+//!         Picknick -> Hike<Down>
 //!    ]
 //! );
 //!
 //! // Add the structs that correspond to the defined states.
-//! # use std::cell::RefCell;
-//! # use std::rc::Rc;
-//! use sfsm_base::State;
-//! use sfsm::sfsm_base::Transition;
-//! struct InitState {
-//! #   state_message: Rc<RefCell<String>>
+//! struct Up {};
+//! struct Down {};
+//!
+//! struct Hike<Dir> {
+//!     marker: PhantomData<Dir>,
 //! }
 //!
-//! struct WaitingState {
-//!    counter: u32,
-//! #   state_message: Rc<RefCell<String>>
-//! }
-//!
-//! struct EndState {
-//! #   state_message: Rc<RefCell<String>>
+//! struct Picknick {
+//!    apples: u32,
 //! }
 //!
 //! // Implement the states traits
 //! // ...
-//! # impl State for InitState {
+//! # impl State for Hike<Up> {
 //! #     fn entry(&mut self) {
 //! #         println!("****************************************");
-//! #         println!("Init: Enter");
+//! #         println!("Hike<Up>: Start hiking up");
 //! #     }
 //! #     fn execute(&mut self) {
-//! #         let mut msg = self.state_message.borrow_mut();
-//! #         *msg = "InitState".to_string();
-//! #         println!("Init: Execute");
+//! #         println!("Hike<Up>: Keep walking");
 //! #     }
 //! #     fn exit(&mut self) {
-//! #         println!("Init: Exit");
+//! #         println!("Hike<Up>: Take a break");
 //! #     }
 //! # }
-//! impl State for WaitingState {
+//! impl State for Picknick {
 //!     fn entry(&mut self) {
 //!         println!("****************************************");
-//!         println!("Waiting: Enter");
+//!         println!("Picknick: Start eating a picknick");
 //!     }
 //!     fn execute(&mut self) {
-//!         self.counter += 1;
-//! #        let mut msg = self.state_message.borrow_mut();
-//! #        *msg = "WaitingState".to_string();
-//!         println!("Waiting: Execute");
+//!         self.apples -= 1;
+//!         println!("Picknick: Eat an apple");
 //!     }
 //!     fn exit(&mut self) {
-//!         println!("Waiting: Exit");
+//!         println!("Picknick: Get up");
 //!     }
 //! }
 //!
-//! # impl State for EndState {
+//! # impl State for Hike<Down> {
 //! #     fn entry(&mut self) {
 //! #         println!("****************************************");
-//! #         println!("End: Enter");
+//! #         println!("Hike<Down>: Start walking back down");
 //! #     }
 //! #     fn execute(&mut self) {
-//! #         let mut msg = self.state_message.borrow_mut();
-//! #         *msg = "EndState".to_string();
-//! #         println!("End: Execute");
+//! #         println!("Hike<Down>: Keep walking");
 //! #     }
 //! #     fn exit(&mut self) {
-//! #         println!("End: Exit");
+//! #         println!("Hike<Down>: Go back home");
 //! #     }
 //! # }
 //! // ...
 //!
 //! // Then implement the transitions
 //! // ...
-//! impl Transition<WaitingState> for InitState {
-//!     fn entry(&mut self) {
-//!         println!("Init -> Waiting: Enter");
-//!     }
-//!     fn execute(&mut self) {
-//!         println!("Init -> Waiting: Execute");
-//!     }
-//!     fn exit(&mut self) {
-//!         println!("Init -> Waiting: Exit");
-//!     }
-//!     fn guard(&self) -> bool {
-//!         return true;
-//!     }
-//! }
-//! # impl Transition<EndState> for WaitingState {
-//! #    fn entry(&mut self) {
-//! #        println!("Waiting -> End: Enter");
-//! #    }
-//! #    fn execute(&mut self) {
-//! #        println!("Waiting -> End: Execute");
-//! #    }
-//! #    fn exit(&mut self) {
-//! #        println!("Waiting -> End: Exit");
-//! #    }
+//! # impl Transition<Picknick> for Hike<Up> {
+//! #     fn entry(&mut self) {
+//! #         println!("Init -> Waiting: Enter");
+//! #     }
+//! #     fn execute(&mut self) {
+//! #         println!("Init -> Waiting: Execute");
+//! #     }
+//! #     fn exit(&mut self) {
+//! #         println!("Init -> Waiting: Exit");
+//! #     }
 //! #     fn guard(&self) -> bool {
-//! #         return self.counter == 2;
+//! #          return true;
 //! #     }
 //! # }
-//! impl Into<WaitingState> for InitState {
-//!     fn into(self) -> WaitingState {
-//!         WaitingState {
-//! #            state_message: self.state_message,
-//!             counter: 0,
-//!         }
+//! impl Transition<Hike<Down>> for Picknick {
+//!    fn entry(&mut self) {
+//!        println!("Waiting -> End: Enter");
+//!    }
+//!    fn execute(&mut self) {
+//!        println!("Waiting -> End: Execute");
+//!    }
+//!    fn exit(&mut self) {
+//!        println!("Waiting -> End: Exit");
+//!    }
+//!     fn guard(&self) -> bool {
+//!         return self.apples == 0;
 //!     }
 //! }
-//! # impl Into<EndState> for WaitingState {
-//! #     fn into(self) -> EndState {
-//! #         EndState {
-//! #             state_message: self.state_message,
+//! # impl Into<Picknick> for Hike<Up> {
+//! #     fn into(self) -> Picknick {
+//! #         Picknick {
+//! #             apples: 3,
 //! #         }
 //! #     }
 //! # }
+//! impl Into<Hike<Down>> for Picknick {
+//!     fn into(self) -> Hike<Down> {
+//!         Hike {
+//!             marker: PhantomData,
+//!         }
+//!     }
+//! }
 //!
 //! // And then run the state machine.
-//! # let state_message = Rc::new(RefCell::new("".to_string()));
-//! let init = InitState {
-//! #    state_message: state_message.clone(),
+//! let init: Hike<Up> = Hike {
+//!    marker: PhantomData,
 //! };
 //!
 //! // Create the state machine with the name defined and pass the initial state into it.
-//! let mut sfsm = StaticSfms::new(init);
-//!
-//! sfsm.step();
-//! # let msg = state_message.borrow().clone();
-//! # assert_eq!(msg, "InitState".to_string());
-//!
-//! sfsm.step();
-//! # let msg = state_message.borrow().clone();
-//! # assert_eq!(msg, "WaitingState".to_string());
-//!
-//! sfsm.step();
-//! # let msg = state_message.borrow().clone();
-//! # assert_eq!(msg, "WaitingState".to_string());
+//! let mut sfsm = Hiker::new(init);
 //!
 //! // If you want to check which state the machine currently is in, you can peak it.
 //! // Note that the generated enum will be named: [CHOOSEN_NAME_OF_SFSM]States and the entries
-//! // will be called [NAME_OF_STRUCT]State
-//! match sfsm.peak_state() {
-//!     StaticSfmsStates::WaitingStateState(_) => {
-//!         assert!(true);
-//!     }
-//! _ => {
-//!         assert!(false);
-//!     }
-//! }
+//! // will be called [NAME_OF_STRUCT_WITH_TYPES]State
+//! let in_state = sfsm.peak_state();
+//!
+//! // The is_state! macro helps you to quickly test if its the state you expect.
+//! assert!(is_state!(in_state, HikerStates::HikeUpState));
+//!
+//! // Start stepping!
+//! sfsm.step();
+//! assert!(is_state!(sfsm.peak_state(), HikerStates::PicknickState));
 //!
 //! sfsm.step();
-//! # let msg = state_message.borrow().clone();
-//! # assert_eq!(msg, "EndState".to_string());
+//! assert!(is_state!(sfsm.peak_state(), HikerStates::PicknickState));
 //!
-//! # let msg = state_message.borrow().clone();
-//! # assert_eq!(msg, "EndState".to_string());
+//! sfsm.step();
+//! assert!(is_state!(sfsm.peak_state(), HikerStates::PicknickState));
+//!
+//! sfsm.step();
+//! assert!(is_state!(sfsm.peak_state(), HikerStates::HikeDownState));
 //!
 //! // Once you are done using the state machine, you can stop it and return the current state.
 //! let exit = sfsm.stop();
+//! assert!(is_state!(exit, HikerStates::HikeDownState));
 //!
-//! match exit {
-//!     StaticSfmsStates::EndStateState(_) => {
-//!         assert!(true);
-//!     }
-//! _ => {
-//!         assert!(false);
-//!     }
-//! }
 //!```
 //! This will then produce the following output:
 //!```text
