@@ -31,8 +31,8 @@
 //!```rust
 //! extern crate sfsm_proc;
 //! extern crate sfsm_base;
-//! use sfsm_proc::add_state_machine;
-//! use sfsm_base::{is_state, State, Transition};
+//! use sfsm_proc::{add_state_machine, is_state, match_state_entry};
+//! use sfsm_base::{State, Transition};
 //! use std::marker::PhantomData;
 //!
 //! // To start out, first define the state machine.
@@ -58,6 +58,7 @@
 //!
 //! struct Hike<Dir> {
 //!     marker: PhantomData<Dir>,
+//!     is_down: bool,
 //! }
 //!
 //! struct Picknick {
@@ -70,6 +71,7 @@
 //! #     fn entry(&mut self) {
 //! #         println!("****************************************");
 //! #         println!("Hike<Up>: Start hiking up");
+//! #         self.is_down = false;
 //! #     }
 //! #     fn execute(&mut self) {
 //! #         println!("Hike<Up>: Keep walking");
@@ -102,6 +104,7 @@
 //! #     }
 //! #     fn exit(&mut self) {
 //! #         println!("Hike<Down>: Go back home");
+//! #         self.is_down = true;
 //! #     }
 //! # }
 //! // ...
@@ -147,6 +150,7 @@
 //!     fn into(self) -> Hike<Down> {
 //!         Hike {
 //!             marker: PhantomData,
+//!             is_down: false,
 //!         }
 //!     }
 //! }
@@ -154,6 +158,7 @@
 //! // And then run the state machine.
 //! let init: Hike<Up> = Hike {
 //!    marker: PhantomData,
+//!    is_down: true,
 //! };
 //!
 //! // Create the state machine with the name defined and pass the initial state into it.
@@ -165,24 +170,37 @@
 //! let in_state = sfsm.peak_state();
 //!
 //! // The is_state! macro helps you to quickly test if its the state you expect.
-//! assert!(is_state!(in_state, HikerStates::HikeUpState));
+//! assert!(is_state!(in_state, Hiker, Hike<Up>));
 //!
 //! // Start stepping!
 //! sfsm.step();
-//! assert!(is_state!(sfsm.peak_state(), HikerStates::PicknickState));
+//! assert!(is_state!(sfsm.peak_state(), Hiker, Picknick));
 //!
 //! sfsm.step();
-//! assert!(is_state!(sfsm.peak_state(), HikerStates::PicknickState));
+//! assert!(is_state!(sfsm.peak_state(), Hiker, Picknick));
 //!
 //! sfsm.step();
-//! assert!(is_state!(sfsm.peak_state(), HikerStates::PicknickState));
+//! assert!(is_state!(sfsm.peak_state(), Hiker, Picknick));
 //!
 //! sfsm.step();
-//! assert!(is_state!(sfsm.peak_state(), HikerStates::HikeDownState));
+//! assert!(is_state!(sfsm.peak_state(), Hiker, Hike<Down>));
 //!
 //! // Once you are done using the state machine, you can stop it and return the current state.
 //! let exit = sfsm.stop();
-//! assert!(is_state!(exit, HikerStates::HikeDownState));
+//! assert!(is_state!(exit, Hiker, Hike<Down>));
+//!
+//! match exit {
+//!     // If you don't want to type out the state enum use the match_state_entry! macro here
+//!     // It generates the following: [SFSM_NAME]States::[STATE_NAME_AND_TYPES]State(state)
+//!     // Otherwise you have to type it out manually with the given schema.
+//!     match_state_entry!(Hiker, Hike<Down>, exit_state) => {
+//!         // Access "exit_state" here
+//!         assert!(exit_state.unwrap().is_down);
+//!     },
+//!     _ => {
+//!         assert!(false);
+//!     }
+//! }
 //!
 //!```
 //! This will then produce the following output:
