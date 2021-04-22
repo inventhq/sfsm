@@ -104,6 +104,7 @@
 //! #     }
 //! #     fn exit(&mut self) {
 //! #         println!("Hike<Down>: Go back home");
+//! #         println!("****************************************");
 //! #         self.is_down = true;
 //! #     }
 //! # }
@@ -112,28 +113,19 @@
 //! // Then implement the transitions
 //! // ...
 //! # impl Transition<Picknick> for Hike<Up> {
-//! #     fn entry(&mut self) {
-//! #         println!("Init -> Waiting: Enter");
-//! #     }
-//! #     fn execute(&mut self) {
-//! #         println!("Init -> Waiting: Execute");
-//! #     }
-//! #     fn exit(&mut self) {
-//! #         println!("Init -> Waiting: Exit");
-//! #     }
 //! #     fn guard(&self) -> bool {
 //! #          return true;
 //! #     }
 //! # }
 //! impl Transition<Hike<Down>> for Picknick {
 //!    fn entry(&mut self) {
-//!        println!("Waiting -> End: Enter");
+//!     // You might want to do something here. Like starting to count apples
 //!    }
 //!    fn execute(&mut self) {
-//!        println!("Waiting -> End: Execute");
+//!     // You could keep counting apples
 //!    }
 //!    fn exit(&mut self) {
-//!        println!("Waiting -> End: Exit");
+//!     // You might want to sum up what you counted before
 //!    }
 //!     fn guard(&self) -> bool {
 //!         return self.apples == 0;
@@ -185,6 +177,8 @@
 //! sfsm.step();
 //! assert!(is_state!(sfsm.peak_state(), Hiker, Hike<Down>));
 //!
+//! sfsm.step();
+//!
 //! // Once you are done using the state machine, you can stop it and return the current state.
 //! let exit = sfsm.stop();
 //! assert!(is_state!(exit, Hiker, Hike<Down>));
@@ -206,26 +200,24 @@
 //! This will then produce the following output:
 //!```text
 //! ****************************************
-//! Init: Enter
-//! Init -> Waiting: Enter
-//! Init: Execute
-//! Init -> Waiting: Execute
-//! Init: Exit
-//! Init -> Waiting: Exit
+//! Hike<Up>: Start hiking up
+//! Hike<Up>: Keep walking
+//! Hike<Up>: Take a break
 //! ****************************************
-//! Waiting: Enter
-//! Waiting -> End: Enter
-//! Waiting: Execute
-//! Waiting -> End: Execute
-//! Waiting: Execute
-//! Waiting -> End: Execute
-//! Waiting: Exit
-//! Waiting -> End: Exit
+//! Picknick: Start eating a picknick
+//! Picknick: Eat an apple
+//! Picknick: Eat an apple
+//! Picknick: Eat an apple
+//! Picknick: Get up
 //! ****************************************
-//! End: Enter
-//! End: Execute
+//! Hike<Down>: Start walking back down
+//! Hike<Down>: Keep walking
+//! Hike<Down>: Go back home
+//! ****************************************
 //!```
 //! For more detailed descriptions about the traits, look at the sfsm-base doc.
 
 pub extern crate sfsm_proc;
 pub extern crate sfsm_base;
+
+
