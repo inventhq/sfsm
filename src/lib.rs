@@ -162,26 +162,26 @@
 //! // Create the state machine with the name defined and pass the initial state into it.
 //! let mut sfsm = Hiker::new(init);
 //!
-//! // If you want to check which state the machine currently is in, you can peak it.
+//! // If you want to check which state the machine currently is in, you can peek it.
 //! // Note that the generated enum will be named: [CHOOSEN_NAME_OF_SFSM]States and the entries
 //! // will be called [NAME_OF_STRUCT_WITH_TYPES]State
-//! let in_state = sfsm.peak_state();
+//! let in_state = sfsm.peek_state();
 //!
 //! // The is_state! macro helps you to quickly test if its the state you expect.
 //! assert!(is_state!(in_state, Hiker, Hike<Up>));
 //!
 //! // Start stepping!
 //! sfsm.step();
-//! assert!(is_state!(sfsm.peak_state(), Hiker, Picknick));
+//! assert!(is_state!(sfsm.peek_state(), Hiker, Picknick));
 //!
 //! sfsm.step();
-//! assert!(is_state!(sfsm.peak_state(), Hiker, Picknick));
+//! assert!(is_state!(sfsm.peek_state(), Hiker, Picknick));
 //!
 //! sfsm.step();
-//! assert!(is_state!(sfsm.peak_state(), Hiker, Picknick));
+//! assert!(is_state!(sfsm.peek_state(), Hiker, Picknick));
 //!
 //! sfsm.step();
-//! assert!(is_state!(sfsm.peak_state(), Hiker, Hike<Down>));
+//! assert!(is_state!(sfsm.peek_state(), Hiker, Hike<Down>));
 //!
 //! sfsm.step();
 //!
