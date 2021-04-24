@@ -66,7 +66,6 @@
 //! }
 //!
 //! // Implement the states traits
-//! // ...
 //! # impl State for Hike<Up> {
 //! #     fn entry(&mut self) {
 //! #         println!("****************************************");
@@ -108,10 +107,12 @@
 //! #         self.is_down = true;
 //! #     }
 //! # }
+//!
+//! // Note: The state implementation for Hike<Up> and Hike<Down> is hidden
+//!
 //! // ...
 //!
 //! // Then implement the transitions
-//! // ...
 //! # impl Transition<Picknick> for Hike<Up> {
 //! #     fn guard(&self) -> bool {
 //! #          return true;
@@ -131,6 +132,7 @@
 //!         return self.apples == 0;
 //!     }
 //! }
+//!
 //! # impl Into<Picknick> for Hike<Up> {
 //! #     fn into(self) -> Picknick {
 //! #         Picknick {
@@ -146,6 +148,10 @@
 //!         }
 //!     }
 //! }
+//!
+//! // Note: The transition Hike<Up> -> Picknick is hidden
+//!
+//! // ...
 //!
 //! // And then run the state machine.
 //! let init: Hike<Up> = Hike {

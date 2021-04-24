@@ -11,4 +11,4 @@ description = "Generate static state machines"
 
 [dependencies]
 sfsm-base = "0.1.2"
-sfsm-proc = "0.2.2"
+sfsm-proc = "0.2.3"
