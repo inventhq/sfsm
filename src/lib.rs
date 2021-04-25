@@ -25,7 +25,7 @@
 //! - Self documenting
 //! - Easy to use
 //! - Low cost
-//! 
+//!
 //! Sfsm tries to achieve these objectives by providing a state machine generator in sfsm-proc and a
 //! transition as well as state trait in sfsm-proc. With this, the user can specify the whole state machine on
 //! a few lines that are easy to review. From this definition, the whole state machine can be generated

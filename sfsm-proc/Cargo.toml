@@ -1,0 +1,19 @@
+[package]
+name = "sfsm-proc"
+version = "0.2.3"
+authors = ["Samuel Schuepbach <schuepbs@gmail.com>"]
+edition = "2018"
+license = "MIT"
+readme = "README.md"
+keywords = ["static", "state-machine", "no_std", "embedded"]
+repository = "https://gitlab.com/sfsm/sfsm-proc"
+description = "Macros to generate state machines for sfsm"
+
+[lib]
+proc-macro = true
+
+[dependencies]
+quote = "1.0.8"
+proc-macro2 = "1.0"
+convert_case = "0.4.0"
+syn = {version="1.0.57", features=["full","fold"]}

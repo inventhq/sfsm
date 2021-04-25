@@ -1,0 +1,12 @@
+[package]
+name = "sfsm-base"
+version = "0.1.2"
+authors = ["Samuel Schuepbach <schuepbs@gmail.com>"]
+edition = "2018"
+license = "MIT"
+readme = "README.md"
+keywords = ["static", "state-machine", "no_std", "embedded"]
+repository = "https://gitlab.com/sfsm/sfsm-base"
+description = "Traits for the sfsm crate."
+
+[dependencies]

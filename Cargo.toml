@@ -9,6 +9,9 @@ keywords = ["static", "state-machine", "no_std", "embedded"]
 repository = "https://gitlab.com/sfsm/sfsm"
 description = "Generate static state machines"
 
+[workspace]
+members = ["sfsm-base", "sfsm-proc"]
+
 [dependencies]
-sfsm-base = "0.1.2"
-sfsm-proc = "0.2.3"
+sfsm-proc = {path = "sfsm-proc"}
+sfsm-base = {path = "sfsm-base"}
