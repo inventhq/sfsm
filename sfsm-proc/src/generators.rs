@@ -34,11 +34,11 @@ impl ToTokens for StateMachineToTokens<'_> {
 
         let token_steam = proc_macro2::TokenStream::from(quote! {
 
-            pub enum #enum_name {
+            enum #enum_name {
                 #(#state_entries)*
             }
 
-            pub struct #sfsm_name {
+            struct #sfsm_name {
                 states: #enum_name,
                 do_entry: bool,
             }
