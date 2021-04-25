@@ -2,28 +2,35 @@
 
 //! # Static finite state machine
 //!
-//! State machines are a existential part of many software architectures and are particularly
-//! common on low level systems such as embedded systems. They allow a complicated system to be
-//! broken down into many small states with clearly defined transitions between each other.
-//! But while help to break down complexity, they must also be well documented to be understandable.
-//!
-//! Rust lends itself to implement state machines fairly well thanks the way its enums are designed.
-//! Unfortunately this still comes with a large amount of boilerplate.
-//!
-//! Sfsm aims to let the user implement simple, efficient and easy to review state machines that are
-//! usable on embedded systems.
-//! The main objectives therefore are:
-//! - no_std compatibility
-//! - Self documenting
-//! - Easy to use
-//! - Low cost
-//!
 //! Sfsm tries to achieve these objectives, by providing a state machine generator in sfsm-proc and
 //! a transition as well as state trait in sfsm-proc. With this, the user can specify the whole state
 //! machine on a few lines that are easy to review. From this definition, the whole state machine
 //! can be generated without relying on dynamic mechanisms and thus allows to be fully static.
 //! All that is left to do, is to implement the states and transition necessary to fulfill the
 //! Transition and State traits.
+//!
+//! State machines are an essential part of many software architectures and are particularly common on low
+//! level systems such as embedded systems. They allow a complicated system to be broken down into many
+//! small states with clearly defined transitions between each other. But while they help to break down
+//! complexity, they must also be well documented to be understandable.
+//!
+//! Rust is well suited to implementing state machines thanks the way its enums are designed.
+//! Unfortunately this still comes with a large amount of boilerplate.
+//!
+//! Sfsm aims to let the user implement simple, efficient and easy to review state machines that are usable
+//! on embedded systems. The main objectives therefore are:
+//!
+//! The main objectives therefore are:
+//! - no_std compatibility
+//! - Self documenting
+//! - Easy to use
+//! - Low cost
+//! 
+//! Sfsm tries to achieve these objectives by providing a state machine generator in sfsm-proc and a
+//! transition as well as state trait in sfsm-proc. With this, the user can specify the whole state machine on
+//! a few lines that are easy to review. From this definition, the whole state machine can be generated
+//! without relying on dynamic mechanisms and thus allows to be fully static. All that is left to do is to
+//! implement the states and transition necessary to fulfill the Transition and State traits.
 //!
 //!
 //! # How to use
@@ -43,12 +50,12 @@
 //!         // Define all states. These states must correspond to a struct
 //!         Hike<Up>,
 //!         Hike<Down>,
-//!         Picknick
+//!         Picknic
 //!    ],
 //!    [
 //!         // Define all transitions with: Src -> Dst
-//!         Hike<Up> -> Picknick,
-//!         Picknick -> Hike<Down>
+//!         Hike<Up> -> Picknic,
+//!         Picknic -> Hike<Down>
 //!    ]
 //! );
 //!
@@ -61,7 +68,7 @@
 //!     is_down: bool,
 //! }
 //!
-//! struct Picknick {
+//! struct Picknic {
 //!    apples: u32,
 //! }
 //!
@@ -79,17 +86,17 @@
 //! #         println!("Hike<Up>: Take a break");
 //! #     }
 //! # }
-//! impl State for Picknick {
+//! impl State for Picknic {
 //!     fn entry(&mut self) {
 //!         println!("****************************************");
-//!         println!("Picknick: Start eating a picknick");
+//!         println!("Picknic: Start eating a picknick");
 //!     }
 //!     fn execute(&mut self) {
 //!         self.apples -= 1;
-//!         println!("Picknick: Eat an apple");
+//!         println!("Picknic: Eat an apple");
 //!     }
 //!     fn exit(&mut self) {
-//!         println!("Picknick: Get up");
+//!         println!("Picknic: Get up");
 //!     }
 //! }
 //!
@@ -113,12 +120,12 @@
 //! // ...
 //!
 //! // Then implement the transitions
-//! # impl Transition<Picknick> for Hike<Up> {
+//! # impl Transition<Picknic> for Hike<Up> {
 //! #     fn guard(&self) -> bool {
 //! #          return true;
 //! #     }
 //! # }
-//! impl Transition<Hike<Down>> for Picknick {
+//! impl Transition<Hike<Down>> for Picknic {
 //!    fn entry(&mut self) {
 //!     // You might want to do something here. Like starting to count apples
 //!    }
@@ -133,14 +140,14 @@
 //!     }
 //! }
 //!
-//! # impl Into<Picknick> for Hike<Up> {
-//! #     fn into(self) -> Picknick {
-//! #         Picknick {
+//! # impl Into<Picknic> for Hike<Up> {
+//! #     fn into(self) -> Picknic {
+//! #         Picknic {
 //! #             apples: 3,
 //! #         }
 //! #     }
 //! # }
-//! impl Into<Hike<Down>> for Picknick {
+//! impl Into<Hike<Down>> for Picknic {
 //!     fn into(self) -> Hike<Down> {
 //!         Hike {
 //!             marker: PhantomData,
@@ -149,7 +156,7 @@
 //!     }
 //! }
 //!
-//! // Note: The transition Hike<Up> -> Picknick is hidden
+//! // Note: The transition Hike<Up> -> Picknic is hidden
 //!
 //! // ...
 //!
@@ -172,13 +179,13 @@
 //!
 //! // Start stepping!
 //! sfsm.step();
-//! assert!(is_state!(sfsm.peek_state(), Hiker, Picknick));
+//! assert!(is_state!(sfsm.peek_state(), Hiker, Picknic));
 //!
 //! sfsm.step();
-//! assert!(is_state!(sfsm.peek_state(), Hiker, Picknick));
+//! assert!(is_state!(sfsm.peek_state(), Hiker, Picknic));
 //!
 //! sfsm.step();
-//! assert!(is_state!(sfsm.peek_state(), Hiker, Picknick));
+//! assert!(is_state!(sfsm.peek_state(), Hiker, Picknic));
 //!
 //! sfsm.step();
 //! assert!(is_state!(sfsm.peek_state(), Hiker, Hike<Down>));
@@ -210,11 +217,11 @@
 //! Hike<Up>: Keep walking
 //! Hike<Up>: Take a break
 //! ****************************************
-//! Picknick: Start eating a picknick
-//! Picknick: Eat an apple
-//! Picknick: Eat an apple
-//! Picknick: Eat an apple
-//! Picknick: Get up
+//! Picknic: Start eating a picknick
+//! Picknic: Eat an apple
+//! Picknic: Eat an apple
+//! Picknic: Eat an apple
+//! Picknic: Get up
 //! ****************************************
 //! Hike<Down>: Start walking back down
 //! Hike<Down>: Keep walking
