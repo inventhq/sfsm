@@ -13,5 +13,5 @@ description = "Generate static state machines"
 members = ["sfsm-base", "sfsm-proc"]
 
 [dependencies]
-sfsm-proc = {path = "sfsm-proc"}
-sfsm-base = {path = "sfsm-base"}
+sfsm-proc = {path = "sfsm-proc", version = "0.2.4"}
+sfsm-base = {path = "sfsm-base", version = "0.1.2"}
