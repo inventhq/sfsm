@@ -230,7 +230,8 @@
 //!```
 //! For more detailed descriptions about the traits, look at the sfsm-base doc.
 
-pub extern crate sfsm_proc;
-pub extern crate sfsm_base;
+extern crate sfsm_proc;
+extern crate sfsm_base;
 
-
+pub use sfsm_proc::*;
+pub use sfsm_base::*;
