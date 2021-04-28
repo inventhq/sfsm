@@ -103,6 +103,18 @@ use crate::types::{MatchStateEntry};
 ///         }
 ///     }
 /// }
+///
+/// // One for each state
+/// impl IsState<Move<Down>> for Elevator {
+///     fn is_state(&self) -> bool {
+///         return match self.states {
+///             ElevatorStates::MoveDownState(_) => {
+///                 true
+///             }
+///             _ => false
+///         }
+///     }
+/// }
 ///```
 ///
 #[proc_macro]
