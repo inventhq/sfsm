@@ -32,7 +32,13 @@ impl ToTokens for StateMachineToTokens<'_> {
             return StopToTokens::new(self.machine, state);
         }).collect();
 
+        let is_states: Vec<IsStateToTokens> = (&self.machine.states).into_iter().map(|state| {
+            return IsStateToTokens::new(self.machine, state);
+        }).collect();
+
         let token_steam = proc_macro2::TokenStream::from(quote! {
+
+            use sfsm::IsState;
 
             enum #enum_name {
                 #(#state_entries)*
@@ -70,8 +76,10 @@ impl ToTokens for StateMachineToTokens<'_> {
                         # ( #exits )*,
                     }
                 }
-
             }
+
+            // Implement the is_state checks
+            #(#is_states)*
         });
 
         tokens.extend(token_steam);
@@ -104,6 +112,45 @@ impl ToTokens for StopToTokens<'_> {
                 #exit_transitions
                 #enum_name::#state_entry(Some(state))
             }
+        });
+
+        tokens.extend(token_steam);
+
+    }
+}
+
+struct IsStateToTokens<'a> {
+    machine: &'a Machine,
+    state: &'a State,
+}
+
+impl<'a> IsStateToTokens<'a> {
+    pub fn new(machine: &'a Machine, state: &'a State) -> Self {
+        Self {
+            machine,
+            state
+        }
+    }
+}
+
+impl ToTokens for IsStateToTokens<'_> {
+    fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
+        let state_entry = &self.state.enum_name;
+        let state = &self.state;
+        let enum_name = &self.machine.enum_name;
+        let sfsm_name = &self.machine.name;
+        let token_steam = proc_macro2::TokenStream::from(quote! {
+            impl IsState<#state> for #sfsm_name {
+                fn is_state(&self) -> bool {
+                    return match self.states {
+                        #enum_name::#state_entry(_) => {
+                            true
+                        }
+                        _ => false
+                    }
+                }
+            }
+
         });
 
         tokens.extend(token_steam);

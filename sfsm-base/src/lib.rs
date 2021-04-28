@@ -46,10 +46,21 @@ pub trait Transition<DestinationState>: Into<DestinationState> {
     fn guard(&self) -> bool;
 }
 
+/// An implementation of this trait will be implemented for the state machine for every state.
+/// This allows to test if the state machine is in the given state.
+///
+/// ```ignore
+/// let is_in_state: bool = IsState::<State>::is_state(&sfsm);
+/// ```
+///
+pub trait IsState<State> {
+    fn is_state(&self) -> bool;
+}
+
 // Test the concept
 #[cfg(test)]
 mod tests {
-    use crate::{State, Transition};
+    use crate::{State, Transition, IsState};
     use std::rc::Rc;
     use std::cell::RefCell;
 
@@ -133,6 +144,28 @@ mod tests {
     struct StaticFiniteStateMachine {
         states: SfsmStates,
         do_entry: bool,
+    }
+
+    impl IsState<InitData> for StaticFiniteStateMachine {
+        fn is_state(&self) -> bool {
+            return match self.states {
+                SfsmStates::InitStateEntry(_) => {
+                    true
+                }
+                _ => false
+            }
+        }
+    }
+
+    impl IsState<ProcessData> for StaticFiniteStateMachine {
+        fn is_state(&self) -> bool {
+            return match self.states {
+                SfsmStates::ProcessStateEntry(_) => {
+                    true
+                }
+                _ => false
+            }
+        }
     }
 
     impl StaticFiniteStateMachine {
@@ -259,12 +292,19 @@ mod tests {
         };
 
         let mut sfms = StaticFiniteStateMachine::new(init);
+
+        let is_in_init = IsState::<InitData>::is_state(&sfms);
+        assert!(is_in_init);
+
         sfms.step();
 
         assert_eq!(*monitor.borrow(), StateMonitor::Init);
 
         sfms.step();
-        assert_eq!(*monitor.borrow(), StateMonitor::Process);
+        let is_in_process = IsState::<ProcessData>::is_state(&sfms);
+        assert!(is_in_process);
+        let is_in_process = IsState::<InitData>::is_state(&sfms);
+        assert_eq!(false, is_in_process);
 
         let state = sfms.peek_state();
 

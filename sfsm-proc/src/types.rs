@@ -1,5 +1,5 @@
 use proc_macro2::Ident;
-use syn::{AngleBracketedGenericArguments, Expr};
+use syn::{AngleBracketedGenericArguments};
 
 #[derive(Clone)]
 /// Contains all data for the states
@@ -34,10 +34,4 @@ pub struct StateEntry {
 pub struct MatchStateEntry {
     pub state_entry: StateEntry,
     pub var_name: Ident,
-}
-
-// Contains data needed check if the current state is active
-pub struct IsState {
-    pub state: Expr,
-    pub state_entry: StateEntry,
 }
