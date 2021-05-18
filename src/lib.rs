@@ -39,7 +39,7 @@
 //! extern crate sfsm_proc;
 //! extern crate sfsm_base;
 //! use sfsm_proc::{add_state_machine, is_state, match_state_entry};
-//! use sfsm_base::{State, Transition, TransitGuard};
+//! use sfsm_base::{State, Transition};
 //! use std::marker::PhantomData;
 //!
 //! // To start out, first define the state machine.
@@ -121,8 +121,8 @@
 //!
 //! // Then implement the transitions
 //! # impl Transition<Picknic> for Hike<Up> {
-//! #     fn guard(&self) -> TransitGuard {
-//! #          return TransitGuard::Transit;
+//! #     fn guard(&self) -> bool {
+//! #          return true;
 //! #     }
 //! # }
 //! impl Transition<Hike<Down>> for Picknic {
@@ -135,12 +135,8 @@
 //!    fn exit(&mut self) {
 //!     // You might want to sum up what you counted before
 //!    }
-//!     fn guard(&self) -> TransitGuard {
-//!         if self.apples == 0 {
-//!             TransitGuard::Transit
-//!         } else {
-//!             TransitGuard::Remain
-//!         }
+//!     fn guard(&self) -> bool {
+//!         return self.apples == 0;
 //!     }
 //! }
 //!
@@ -207,7 +203,7 @@
 //!     match_state_entry!(Hiker, Hike<Down>, exit_state) => {
 //!         // Access "exit_state" here
 //!         assert!(exit_state.unwrap().is_down);
-//!     }
+//!     },
 //!     _ => {
 //!         assert!(false);
 //!     }
