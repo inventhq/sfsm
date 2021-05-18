@@ -20,12 +20,44 @@ pub trait State {
 }
 
 /// Enum used to indicate to the guard function if the transition should transit to the
-/// next state or remain in the current one
+/// next state or remain in the current one.
+/// ```ignore
+/// impl Transition<Bar> for Foo {
+///     fn guard(&self) -> TransitGuard {
+///         if self.foo == 0 {
+///             TransitGuard::Transit
+///         } else {
+///             TransitGuard::Transit
+///         }
+///     }
+/// }
+/// ```
+#[derive(PartialEq)]
 pub enum TransitGuard {
     /// Remains in the current state
     Remain,
     // Transits into the next state
     Transit
+}
+
+/// Implements from<bool> trait for use of use.
+/// This allows to transit by returning true. Which simplify the code since it allows to return the
+/// TransitGuard from a simple comparison.
+/// ```ignore
+/// impl Transition<Bar> for Foo {
+///     fn guard(&self) -> TransitGuard {
+///         self.foo == 0 // Transits when self.foo == 0
+///     }
+/// }
+/// ```
+impl From<bool> for TransitGuard {
+    fn from(transit: bool) -> Self {
+        if transit {
+            TransitGuard::Transit
+        } else {
+            TransitGuard::Remain
+        }
+    }
 }
 
 /// Trait that must be implemented by a state that want to transition to DestinationState.
