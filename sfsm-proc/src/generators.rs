@@ -217,7 +217,7 @@ impl ToTokens for TransitionToTokens<'_> {
         let enum_name = &self.machine.enum_name;
         let exit_transitions = ExitTransitionToTokens::new(&self.state.transits);
         let token_steam = proc_macro2::TokenStream::from(quote! {
-            if Transition::<#target_state>::guard(&state) {
+            if Transition::<#target_state>::guard(&state) == TransitGuard::Transit {
 
                 State::exit(&mut state);
 
