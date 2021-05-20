@@ -38,7 +38,7 @@
 //!```rust
 //! extern crate sfsm_proc;
 //! extern crate sfsm_base;
-//! use sfsm_proc::{add_state_machine, is_state, match_state_entry};
+//! use sfsm_proc::{add_state_machine, match_state_entry};
 //! use sfsm_base::{State, Transition, TransitGuard};
 //! use std::marker::PhantomData;
 //!
@@ -178,27 +178,26 @@
 //! // will be called [NAME_OF_STRUCT_WITH_TYPES]State
 //! let in_state = sfsm.peek_state();
 //!
-//! // The is_state! macro helps you to quickly test if its the state you expect.
-//! assert!(is_state!(in_state, Hiker, Hike<Up>));
+//! // The IsState trait implementations helps you to quickly test if its the state you expect.
+//! assert!(IsState::<Hike<Up>>::is_state(&sfsm));
 //!
 //! // Start stepping!
 //! sfsm.step();
-//! assert!(is_state!(sfsm.peek_state(), Hiker, Picknic));
+//! assert!(IsState::<Picknic>::is_state(&sfsm));
 //!
 //! sfsm.step();
-//! assert!(is_state!(sfsm.peek_state(), Hiker, Picknic));
+//! assert!(IsState::<Picknic>::is_state(&sfsm));
 //!
 //! sfsm.step();
-//! assert!(is_state!(sfsm.peek_state(), Hiker, Picknic));
+//! assert!(IsState::<Picknic>::is_state(&sfsm));
 //!
 //! sfsm.step();
-//! assert!(is_state!(sfsm.peek_state(), Hiker, Hike<Down>));
+//! assert!(IsState::<Hike<Down>>::is_state(&sfsm));
 //!
 //! sfsm.step();
 //!
 //! // Once you are done using the state machine, you can stop it and return the current state.
 //! let exit = sfsm.stop();
-//! assert!(is_state!(exit, Hiker, Hike<Down>));
 //!
 //! match exit {
 //!     // If you don't want to type out the state enum use the match_state_entry! macro here

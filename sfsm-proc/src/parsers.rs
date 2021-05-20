@@ -1,11 +1,11 @@
 use proc_macro2::{Ident, Span};
 use proc_macro::{TokenStream};
-use syn::{Result, AngleBracketedGenericArguments, Expr};
+use syn::{Result, AngleBracketedGenericArguments};
 use syn::parse::{Parse, ParseStream, Parser};
 use syn::punctuated::{Punctuated};
 use syn::Token;
 use convert_case::{Case, Casing};
-use crate::types::{State, Transition, Machine, IsState, StateEntry, MatchStateEntry};
+use crate::types::{State, Transition, Machine, StateEntry, MatchStateEntry};
 use quote::ToTokens;
 
 impl State {
@@ -124,20 +124,6 @@ impl Parse for Machine {
             init,
             states,
             enum_name,
-        })
-    }
-}
-
-impl Parse for IsState {
-    fn parse(input: ParseStream) -> Result<Self> {
-
-        let state: Expr = input.parse()?;
-        input.parse::<syn::Token![,]>()?;
-        let state_entry: StateEntry = input.parse()?;
-
-        Ok(Self {
-            state,
-            state_entry,
         })
     }
 }
