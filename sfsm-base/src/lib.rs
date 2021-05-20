@@ -101,8 +101,7 @@ pub trait IsState<State> {
 // Test the concept
 #[cfg(test)]
 mod tests {
-    use crate::{State, Transition, IsState};
-    use crate::{State, Transition, TransitGuard};
+    use crate::{State, Transition, IsState, TransitGuard};
     use std::rc::Rc;
     use std::cell::RefCell;
 
