@@ -182,22 +182,22 @@
 //! assert!(IsState::<Hike<Up>>::is_state(&sfsm));
 //!
 //! // Start stepping!
-//! sfsm.step();
+//! sfsm.step().unwrap();
 //! assert!(IsState::<Picknic>::is_state(&sfsm));
 //!
-//! sfsm.step();
+//! sfsm.step().unwrap();
 //! assert!(IsState::<Picknic>::is_state(&sfsm));
 //!
-//! sfsm.step();
+//! sfsm.step().unwrap();
 //! assert!(IsState::<Picknic>::is_state(&sfsm));
 //!
-//! sfsm.step();
+//! sfsm.step().unwrap();
 //! assert!(IsState::<Hike<Down>>::is_state(&sfsm));
 //!
-//! sfsm.step();
+//! sfsm.step().unwrap();
 //!
 //! // Once you are done using the state machine, you can stop it and return the current state.
-//! let exit = sfsm.stop();
+//! let exit = sfsm.stop().unwrap();
 //!
 //! match exit {
 //!     // If you don't want to type out the state enum use the match_state_entry! macro here
