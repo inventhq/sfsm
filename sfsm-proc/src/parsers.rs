@@ -1,6 +1,6 @@
 use proc_macro2::{Ident, Span};
 use proc_macro::{TokenStream};
-use syn::{Result, AngleBracketedGenericArguments};
+use syn::{Result, AngleBracketedGenericArguments, Visibility, Attribute};
 use syn::parse::{Parse, ParseStream, Parser};
 use syn::punctuated::{Punctuated};
 use syn::Token;
@@ -81,6 +81,10 @@ impl Machine {
 impl Parse for Machine {
     fn parse(input: ParseStream) -> Result<Self> {
 
+        let attributes = input.call(Attribute::parse_outer).unwrap();
+
+        let visibility: Option<Visibility> = input.parse().ok();
+
         let name: Ident = input.parse()?;
         input.parse::<syn::Token![,]>()?;
 
@@ -120,6 +124,8 @@ impl Parse for Machine {
         let enum_name = Machine::enum_name(&name);
 
         Ok(Self {
+            attributes,
+            visibility,
             name,
             init,
             states,

@@ -19,6 +19,8 @@ impl ToTokens for StateMachineToTokens<'_> {
         let enum_name = &self.machine.enum_name;
         let init_state = &self.machine.init;
         let init_state_entry = &self.machine.init.enum_name;
+        let attribute = &self.machine.attributes;
+        let vis = &self.machine.visibility;
 
         let states: Vec<StateToTokens> = (&self.machine.states).into_iter().map(|state| {
             StateToTokens::new(self.machine, state)
@@ -41,11 +43,13 @@ impl ToTokens for StateMachineToTokens<'_> {
             use sfsm::IsState;
             use sfsm::SfsmError;
 
-            enum #enum_name {
+            #(#attribute)*
+            #vis enum #enum_name {
                 #(#state_entries)*
             }
 
-            struct #sfsm_name {
+            #(#attribute)*
+            #vis struct #sfsm_name {
                 states: #enum_name,
                 do_entry: bool,
             }
