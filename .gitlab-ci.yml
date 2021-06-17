@@ -1,0 +1,16 @@
+image: "rust:latest"
+
+stages:          # List of stages for jobs, and their order of execution
+  - build
+  - test
+
+build-job:       # This job runs in the build stage, which runs first.
+  stage: build
+  script:
+    - cargo build
+    - cargo doc
+
+unit-test-job:   # This job runs in the test stage.
+  stage: test    # It only starts when the job in the build stage completes successfully.
+  script:
+    - cargo test

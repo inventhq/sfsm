@@ -19,6 +19,47 @@ pub trait State {
     fn exit(&mut self) {}
 }
 
+/// Enum used to indicate to the guard function if the transition should transit to the
+/// next state or remain in the current one.
+/// ```ignore
+/// impl Transition<Bar> for Foo {
+///     fn guard(&self) -> TransitGuard {
+///         if self.foo == 0 {
+///             TransitGuard::Transit
+///         } else {
+///             TransitGuard::Transit
+///         }
+///     }
+/// }
+/// ```
+#[derive(PartialEq)]
+pub enum TransitGuard {
+    /// Remains in the current state
+    Remain,
+    // Transits into the next state
+    Transit
+}
+
+/// Implements from<bool> trait for use of use.
+/// This allows to transit by returning true. Which simplify the code since it allows to return the
+/// TransitGuard from a simple comparison.
+/// ```ignore
+/// impl Transition<Bar> for Foo {
+///     fn guard(&self) -> TransitGuard {
+///         self.foo == 0 // Transits when self.foo == 0
+///     }
+/// }
+/// ```
+impl From<bool> for TransitGuard {
+    fn from(transit: bool) -> Self {
+        if transit {
+            TransitGuard::Transit
+        } else {
+            TransitGuard::Remain
+        }
+    }
+}
+
 /// Trait that must be implemented by a state that want to transition to DestinationState.
 ///
 /// All states can have none or many transitions.
@@ -43,15 +84,38 @@ pub trait Transition<DestinationState>: Into<DestinationState> {
     /// Specifies when the state has to transit. As long as the guard returns false, the state
     /// stays in the current state. When true is returned, the state machine will transit to
     /// DestinationState
-    fn guard(&self) -> bool;
+    fn guard(&self) -> TransitGuard;
+}
+
+/// An implementation of this trait will be implemented for the state machine for every state.
+/// This allows to test if the state machine is in the given state.
+///
+/// ```ignore
+/// let is_in_state: bool = IsState::<State>::is_state(&sfsm);
+/// ```
+///
+pub trait IsState<State> {
+    fn is_state(&self) -> bool;
+}
+
+/// An error type that will be returned by the state machine if something goes wrong.
+/// Specifically, when the state machine gets stuck in a state due to an internal error.
+/// The state machine is designed in a way where this should not happen, so this can largely be
+/// ignored. It is used in situations that are other wise hard to avoid without a panic!.
+/// It might be extended in the future to contains custom error codes generated from the states
+/// themselves
+#[derive(Debug)]
+pub enum SfsmError {
+    Internal,
 }
 
 // Test the concept
 #[cfg(test)]
 mod tests {
-    use crate::{State, Transition};
+    use crate::{State, Transition, IsState, TransitGuard, SfsmError};
     use std::rc::Rc;
     use std::cell::RefCell;
+    use core::result::Result;
 
     // Definitions of data structs and transitions required
     #[derive(Debug, PartialEq)]
@@ -61,13 +125,12 @@ mod tests {
         Process,
     }
     struct GlobalData { pub val: u32, pub monitor: Rc<RefCell<StateMonitor>> }
-    struct InitData { pub val: u32, pub global: GlobalData }
+    struct InitData { pub global: GlobalData }
     struct ProcessData { pub global: GlobalData  }
 
     // Init state definitions
     impl State for InitData {
         fn entry(&mut self) {
-            self.val = 1;
             self.global.val = 0;
             let mut monitor = self.global.monitor.borrow_mut();
             *monitor = StateMonitor::Init;
@@ -76,8 +139,8 @@ mod tests {
 
     impl Transition<ProcessData> for InitData {
         // Transit immediately
-        fn guard(&self) -> bool {
-            true
+        fn guard(&self) -> TransitGuard {
+            TransitGuard::Transit
         }
     }
 
@@ -105,7 +168,6 @@ mod tests {
     impl Into<InitData> for ProcessData {
         fn into(self) -> InitData {
             InitData {
-                val: 0,
                 global: self.global
             }
         }
@@ -113,14 +175,20 @@ mod tests {
 
     impl Transition<ProcessData> for ProcessData {
         // Transit immediately
-        fn guard(&self) -> bool {
-            return self.global.val == 1;
+        fn guard(&self) -> TransitGuard {
+            if self.global.val == 1 {
+                return TransitGuard::Transit;
+            }
+            return TransitGuard::Remain;
         }
     }
 
     impl Transition<InitData> for ProcessData {
-        fn guard(&self) -> bool {
-            return self.global.val == 2;
+        fn guard(&self) -> TransitGuard {
+            if self.global.val == 2 {
+                return TransitGuard::Transit;
+            }
+            return TransitGuard::Remain;
         }
     }
 
@@ -135,6 +203,28 @@ mod tests {
         do_entry: bool,
     }
 
+    impl IsState<InitData> for StaticFiniteStateMachine {
+        fn is_state(&self) -> bool {
+            return match self.states {
+                SfsmStates::InitStateEntry(_) => {
+                    true
+                }
+                _ => false
+            }
+        }
+    }
+
+    impl IsState<ProcessData> for StaticFiniteStateMachine {
+        fn is_state(&self) -> bool {
+            return match self.states {
+                SfsmStates::ProcessStateEntry(_) => {
+                    true
+                }
+                _ => false
+            }
+        }
+    }
+
     impl StaticFiniteStateMachine {
         // Will this have to be fully generated?
         pub fn new(data: InitData) -> Self {
@@ -146,12 +236,12 @@ mod tests {
             }
         }
 
-        pub fn step(&mut self) {
+        pub fn step(&mut self) -> Result<(), SfsmError> {
             let ref mut e = self.states;
             *e = match *e {
                 SfsmStates::InitStateEntry(ref mut state_option) => {
 
-                    let mut state = state_option.take().unwrap();
+                    let mut state = state_option.take().ok_or(SfsmError::Internal)?;
 
                     if self.do_entry {
                         State::entry(&mut state);
@@ -162,7 +252,7 @@ mod tests {
                     State::execute(&mut state);
                     Transition::<ProcessData>::execute(&mut state);
 
-                    if Transition::<ProcessData>::guard(&state) {
+                    if Transition::<ProcessData>::guard(&state) == TransitGuard::Transit {
 
                         State::exit(&mut state);
                         Transition::<ProcessData>::exit(&mut state);
@@ -176,8 +266,7 @@ mod tests {
                     }
                 }
                 SfsmStates::ProcessStateEntry(ref mut state_option) => {
-
-                    let mut state = state_option.take().unwrap();
+                    let mut state = state_option.take().ok_or(SfsmError::Internal)?;
 
                     if self.do_entry {
                         State::entry(&mut state);
@@ -190,7 +279,7 @@ mod tests {
                     Transition::<InitData>::execute(&mut state);
                     Transition::<ProcessData>::execute(&mut state);
 
-                    if Transition::<InitData>::guard(&state) {
+                    if Transition::<InitData>::guard(&state) == TransitGuard::Transit {
 
                         State::exit(&mut state);
                         Transition::<InitData>::exit(&mut state);
@@ -200,7 +289,7 @@ mod tests {
 
                         self.do_entry = true;
                         SfsmStates::InitStateEntry(Some(next_state_data))
-                    } else if Transition::<ProcessData>::guard(&state) {
+                    } else if Transition::<ProcessData>::guard(&state) == TransitGuard::Transit {
 
                         State::exit(&mut state);
                         Transition::<InitData>::exit(&mut state);
@@ -215,28 +304,29 @@ mod tests {
                         SfsmStates::ProcessStateEntry(Some(state))
                     }
                 }
-            }
+            };
+            Ok(())
         }
 
         pub fn peek_state(&self) -> &SfsmStates {
             return &self.states;
         }
 
-        pub fn stop(mut self) -> SfsmStates {
+        pub fn stop(mut self) -> Result<SfsmStates, SfsmError> {
             match self.states {
                 SfsmStates::InitStateEntry(ref mut state_option) => {
-                    let mut state = state_option.take().unwrap();
+                    let mut state = state_option.take().ok_or(SfsmError::Internal)?;
                     State::exit(&mut state);
                     Transition::<ProcessData>::exit(&mut state);
 
-                    SfsmStates::InitStateEntry(Some(state))
+                    Ok(SfsmStates::InitStateEntry(Some(state)))
                 }
                 SfsmStates::ProcessStateEntry(ref mut state_option) => {
-                    let mut state = state_option.take().unwrap();
+                    let mut state = state_option.take().ok_or(SfsmError::Internal)?;
                     State::exit(&mut state);
                     Transition::<InitData>::exit(&mut state);
                     Transition::<ProcessData>::exit(&mut state);
-                    SfsmStates::ProcessStateEntry(Some(state))
+                    Ok(SfsmStates::ProcessStateEntry(Some(state)))
                 }
             }
         }
@@ -254,17 +344,23 @@ mod tests {
         };
 
         let init = InitData {
-            val: 0,
             global
         };
 
         let mut sfms = StaticFiniteStateMachine::new(init);
-        sfms.step();
+
+        let is_in_init = IsState::<InitData>::is_state(&sfms);
+        assert!(is_in_init);
+
+        sfms.step().unwrap();
 
         assert_eq!(*monitor.borrow(), StateMonitor::Init);
 
-        sfms.step();
-        assert_eq!(*monitor.borrow(), StateMonitor::Process);
+        sfms.step().unwrap();
+        let is_in_process = IsState::<ProcessData>::is_state(&sfms);
+        assert!(is_in_process);
+        let is_in_process = IsState::<InitData>::is_state(&sfms);
+        assert_eq!(false, is_in_process);
 
         let state = sfms.peek_state();
 
@@ -277,13 +373,13 @@ mod tests {
             }
         }
 
-        sfms.step();
+        sfms.step().unwrap();
         assert_eq!(*monitor.borrow(), StateMonitor::Process);
 
-        sfms.step();
+        sfms.step().unwrap();
         assert_eq!(*monitor.borrow(), StateMonitor::Init);
 
-        let exit = sfms.stop();
+        let exit = sfms.stop().unwrap();
 
         match exit {
             SfsmStates::ProcessStateEntry(_) => {

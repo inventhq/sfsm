@@ -6,7 +6,7 @@ use quote::{quote};
 use proc_macro::{TokenStream};
 use types::Machine;
 use crate::generators::StateMachineToTokens;
-use crate::types::{IsState, MatchStateEntry};
+use crate::types::{MatchStateEntry};
 
 /// Generates a state machine from a given state machine definition.
 ///
@@ -22,7 +22,8 @@ use crate::types::{IsState, MatchStateEntry};
 /// So the following example:
 /// ```ignore
 /// add_state_machine!(
-///         Elevator,
+///         #[derive(Debug)]
+///         pub Elevator,
 ///         Move<Up>,
 ///         [Move<Up>, Move<Down>],
 ///         [
@@ -33,11 +34,13 @@ use crate::types::{IsState, MatchStateEntry};
 /// will expand to this state machine.
 ///
 ///```ignore
-/// enum ElevatorStates {
+/// #[derive(Debug)]
+/// pub enum ElevatorStates {
 ///     MoveUpState(Option<Move<Up>>),
 ///     MoveDownState(Option<Move<Down>>),
 /// }
-/// struct Elevator {
+/// #[derive(Debug)]
+/// pub struct Elevator {
 ///     states: ElevatorStates,
 ///     do_entry: bool,
 /// }
@@ -48,12 +51,12 @@ use crate::types::{IsState, MatchStateEntry};
 ///             do_entry: true,
 ///         }
 ///     }
-///     pub fn step(&mut self) {
+///     pub fn step(&mut self) -> Result<(), SfsmError>  {
 ///         use ElevatorStates::*;
 ///         let ref mut e = self.states;
 ///         *e = match *e {
 ///             ElevatorStates::MoveUpState(ref mut state_option) => {
-///                 let mut state = state_option.take().unwrap();
+///                 let mut state = state_option.take().ok_or(SfsmError::Internal)?;
 ///                 if self.do_entry {
 ///                     State::entry(&mut state);
 ///                     Transition::<Move<Down>>::entry(&mut state);
@@ -83,23 +86,36 @@ use crate::types::{IsState, MatchStateEntry};
 ///                 }
 ///             }
 ///         }
+///         Ok(())
 ///     }
 ///     pub fn peek_state(&self) -> &ElevatorStates {
 ///         return &self.states;
 ///     }
-///     pub fn stop(mut self) -> ElevatorStates {
+///     pub fn stop(mut self) -> Result<ElevatorStates, SfsmError> {
 ///         match self.states {
 ///             ElevatorStates::MoveUpState(ref mut state_option) => {
-///                 let mut state = state_option.take().unwrap();
+///                 let mut state = state_option.take().ok_or(SfsmError::Internal)?;
 ///                 State::exit(&mut state);
 ///                 Transition::<Move<Down>>::exit(&mut state);
-///                 ElevatorStates::MoveUpState(Some(state))
+///                 Ok(ElevatorStates::MoveUpState(Some(state)))
 ///             }
 ///             ElevatorStates::MoveDownState(ref mut state_option) => {
-///                 let mut state = state_option.take().unwrap();
+///                 let mut state = state_option.take().ok_or(SfsmError::Internal)?;
 ///                 State::exit(&mut state);
-///                 ElevatorStates::MoveDownState(Some(state))
+///                 Ok(ElevatorStates::MoveDownState(Some(state)))
 ///             }
+///         }
+///     }
+/// }
+///
+/// // One for each state
+/// impl IsState<Move<Down>> for Elevator {
+///     fn is_state(&self) -> bool {
+///         return match self.states {
+///             ElevatorStates::MoveDownState(_) => {
+///                 true
+///             }
+///             _ => false
 ///         }
 ///     }
 /// }
@@ -113,33 +129,6 @@ pub fn add_state_machine(input: TokenStream) -> TokenStream {
 
     TokenStream::from(quote!{
         #sfsm_to_tokens
-    })
-}
-
-/// Checks if the the state (as example returned by peek_state) is in the state to test.
-/// ```ignore
-/// let current_state = sfsm.peek_state();
-/// assert!(is_state!(current_state, NameOfTheSfsm, DesiredState<AndType>));
-/// ```
-#[proc_macro]
-pub fn is_state(input: TokenStream) -> TokenStream {
-
-    let is_state: IsState = syn::parse_macro_input!(input as IsState);
-
-    let state = is_state.state;
-    let state_entry = is_state.state_entry;
-    let enum_name = state_entry.enum_name;
-    let state_entry = state_entry.state_entry;
-
-    TokenStream::from(quote!{
-         match #state {
-             #enum_name::#state_entry(_) => {
-                 true
-             }
-             _ => {
-                 false
-             }
-         }
     })
 }
 
