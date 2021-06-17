@@ -1,5 +1,5 @@
 use proc_macro2::Ident;
-use syn::{AngleBracketedGenericArguments, Expr};
+use syn::{AngleBracketedGenericArguments, Visibility, Attribute};
 
 #[derive(Clone)]
 /// Contains all data for the states
@@ -18,6 +18,8 @@ pub struct Transition {
 
 // Contains all data required to generate the state machine
 pub struct Machine {
+    pub attributes: Vec<Attribute>,
+    pub visibility: Option<Visibility>,
     pub name: Ident,
     pub init: State,
     pub states: Vec<State>,
@@ -34,10 +36,4 @@ pub struct StateEntry {
 pub struct MatchStateEntry {
     pub state_entry: StateEntry,
     pub var_name: Ident,
-}
-
-// Contains data needed check if the current state is active
-pub struct IsState {
-    pub state: Expr,
-    pub state_entry: StateEntry,
 }

@@ -36,15 +36,18 @@
 //! # How to use
 //! To see the whole example, expand the source
 //!```rust
+//! use sfsm::SfsmError;
+//! # fn main() -> Result<(), SfsmError> {
 //! extern crate sfsm_proc;
 //! extern crate sfsm_base;
-//! use sfsm_proc::{add_state_machine, is_state, match_state_entry};
-//! use sfsm_base::{State, Transition};
+//! use sfsm_proc::{add_state_machine, match_state_entry};
+//! use sfsm_base::{State, Transition, TransitGuard};
 //! use std::marker::PhantomData;
 //!
 //! // To start out, first define the state machine.
 //! add_state_machine!(
-//!    Hiker,  // Name of the state machine. Used to run it later
+//!    #[derive(Debug)]
+//!    pub Hiker,  // Name of the state machine. Used to run it later
 //!    Hike<Up>,   // The initial state the state machine will start with
 //!    [
 //!         // Define all states. These states must correspond to a struct
@@ -60,14 +63,18 @@
 //! );
 //!
 //! // Add the structs that correspond to the defined states.
-//! struct Up {};
-//! struct Down {};
+//! #[derive(Debug)]
+//! pub struct Up {};
+//! #[derive(Debug)]
+//! pub struct Down {};
 //!
-//! struct Hike<Dir> {
+//! #[derive(Debug)]
+//! pub struct Hike<Dir> {
 //!     marker: PhantomData<Dir>,
 //!     is_down: bool,
 //! }
 //!
+//! #[derive(Debug)]
 //! struct Picknic {
 //!    apples: u32,
 //! }
@@ -121,8 +128,8 @@
 //!
 //! // Then implement the transitions
 //! # impl Transition<Picknic> for Hike<Up> {
-//! #     fn guard(&self) -> bool {
-//! #          return true;
+//! #     fn guard(&self) -> TransitGuard {
+//! #          return TransitGuard::Transit;
 //! #     }
 //! # }
 //! impl Transition<Hike<Down>> for Picknic {
@@ -135,8 +142,12 @@
 //!    fn exit(&mut self) {
 //!     // You might want to sum up what you counted before
 //!    }
-//!     fn guard(&self) -> bool {
-//!         return self.apples == 0;
+//!     fn guard(&self) -> TransitGuard {
+//!         if self.apples == 0 {
+//!             TransitGuard::Transit
+//!         } else {
+//!             TransitGuard::Remain
+//!         }
 //!     }
 //! }
 //!
@@ -174,27 +185,26 @@
 //! // will be called [NAME_OF_STRUCT_WITH_TYPES]State
 //! let in_state = sfsm.peek_state();
 //!
-//! // The is_state! macro helps you to quickly test if its the state you expect.
-//! assert!(is_state!(in_state, Hiker, Hike<Up>));
+//! // The IsState trait implementations helps you to quickly test if its the state you expect.
+//! assert!(IsState::<Hike<Up>>::is_state(&sfsm));
 //!
 //! // Start stepping!
-//! sfsm.step();
-//! assert!(is_state!(sfsm.peek_state(), Hiker, Picknic));
+//! sfsm.step()?;
+//! assert!(IsState::<Picknic>::is_state(&sfsm));
 //!
-//! sfsm.step();
-//! assert!(is_state!(sfsm.peek_state(), Hiker, Picknic));
+//! sfsm.step()?;
+//! assert!(IsState::<Picknic>::is_state(&sfsm));
 //!
-//! sfsm.step();
-//! assert!(is_state!(sfsm.peek_state(), Hiker, Picknic));
+//! sfsm.step()?;
+//! assert!(IsState::<Picknic>::is_state(&sfsm));
 //!
-//! sfsm.step();
-//! assert!(is_state!(sfsm.peek_state(), Hiker, Hike<Down>));
+//! sfsm.step()?;
+//! assert!(IsState::<Hike<Down>>::is_state(&sfsm));
 //!
-//! sfsm.step();
+//! sfsm.step()?;
 //!
 //! // Once you are done using the state machine, you can stop it and return the current state.
-//! let exit = sfsm.stop();
-//! assert!(is_state!(exit, Hiker, Hike<Down>));
+//! let exit = sfsm.stop()?;
 //!
 //! match exit {
 //!     // If you don't want to type out the state enum use the match_state_entry! macro here
@@ -202,13 +212,15 @@
 //!     // Otherwise you have to type it out manually with the given schema.
 //!     match_state_entry!(Hiker, Hike<Down>, exit_state) => {
 //!         // Access "exit_state" here
-//!         assert!(exit_state.unwrap().is_down);
-//!     },
+//!         assert!(exit_state.ok_or(SfsmError::Internal)?.is_down);
+//!     }
 //!     _ => {
 //!         assert!(false);
 //!     }
 //! }
 //!
+//! # Ok(())
+//! # }
 //!```
 //! This will then produce the following output:
 //!```text
