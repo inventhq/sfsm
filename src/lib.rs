@@ -63,14 +63,18 @@
 //! );
 //!
 //! // Add the structs that correspond to the defined states.
+//! #[derive(Debug)]
 //! pub struct Up {};
+//! #[derive(Debug)]
 //! pub struct Down {};
 //!
+//! #[derive(Debug)]
 //! pub struct Hike<Dir> {
 //!     marker: PhantomData<Dir>,
 //!     is_down: bool,
 //! }
 //!
+//! #[derive(Debug)]
 //! struct Picknic {
 //!    apples: u32,
 //! }
