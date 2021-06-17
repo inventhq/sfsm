@@ -22,7 +22,8 @@ use crate::types::{MatchStateEntry};
 /// So the following example:
 /// ```ignore
 /// add_state_machine!(
-///         Elevator,
+///         #[derive(Debug)]
+///         pub Elevator,
 ///         Move<Up>,
 ///         [Move<Up>, Move<Down>],
 ///         [
@@ -33,11 +34,13 @@ use crate::types::{MatchStateEntry};
 /// will expand to this state machine.
 ///
 ///```ignore
-/// enum ElevatorStates {
+/// #[derive(Debug)]
+/// pub enum ElevatorStates {
 ///     MoveUpState(Option<Move<Up>>),
 ///     MoveDownState(Option<Move<Down>>),
 /// }
-/// struct Elevator {
+/// #[derive(Debug)]
+/// pub struct Elevator {
 ///     states: ElevatorStates,
 ///     do_entry: bool,
 /// }

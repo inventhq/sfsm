@@ -36,6 +36,8 @@
 //! # How to use
 //! To see the whole example, expand the source
 //!```rust
+//! use sfsm::SfsmError;
+//! # fn main() -> Result<(), SfsmError> {
 //! extern crate sfsm_proc;
 //! extern crate sfsm_base;
 //! use sfsm_proc::{add_state_machine, match_state_entry};
@@ -44,7 +46,8 @@
 //!
 //! // To start out, first define the state machine.
 //! add_state_machine!(
-//!    Hiker,  // Name of the state machine. Used to run it later
+//!    #[derive(Debug)]
+//!    pub Hiker,  // Name of the state machine. Used to run it later
 //!    Hike<Up>,   // The initial state the state machine will start with
 //!    [
 //!         // Define all states. These states must correspond to a struct
@@ -60,10 +63,10 @@
 //! );
 //!
 //! // Add the structs that correspond to the defined states.
-//! struct Up {};
-//! struct Down {};
+//! pub struct Up {};
+//! pub struct Down {};
 //!
-//! struct Hike<Dir> {
+//! pub struct Hike<Dir> {
 //!     marker: PhantomData<Dir>,
 //!     is_down: bool,
 //! }
@@ -182,22 +185,22 @@
 //! assert!(IsState::<Hike<Up>>::is_state(&sfsm));
 //!
 //! // Start stepping!
-//! sfsm.step().unwrap();
+//! sfsm.step()?;
 //! assert!(IsState::<Picknic>::is_state(&sfsm));
 //!
-//! sfsm.step().unwrap();
+//! sfsm.step()?;
 //! assert!(IsState::<Picknic>::is_state(&sfsm));
 //!
-//! sfsm.step().unwrap();
+//! sfsm.step()?;
 //! assert!(IsState::<Picknic>::is_state(&sfsm));
 //!
-//! sfsm.step().unwrap();
+//! sfsm.step()?;
 //! assert!(IsState::<Hike<Down>>::is_state(&sfsm));
 //!
-//! sfsm.step().unwrap();
+//! sfsm.step()?;
 //!
 //! // Once you are done using the state machine, you can stop it and return the current state.
-//! let exit = sfsm.stop().unwrap();
+//! let exit = sfsm.stop()?;
 //!
 //! match exit {
 //!     // If you don't want to type out the state enum use the match_state_entry! macro here
@@ -205,13 +208,15 @@
 //!     // Otherwise you have to type it out manually with the given schema.
 //!     match_state_entry!(Hiker, Hike<Down>, exit_state) => {
 //!         // Access "exit_state" here
-//!         assert!(exit_state.unwrap().is_down);
+//!         assert!(exit_state.ok_or(SfsmError::Internal)?.is_down);
 //!     }
 //!     _ => {
 //!         assert!(false);
 //!     }
 //! }
 //!
+//! # Ok(())
+//! # }
 //!```
 //! This will then produce the following output:
 //!```text

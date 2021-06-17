@@ -1,5 +1,5 @@
 use proc_macro2::Ident;
-use syn::{AngleBracketedGenericArguments};
+use syn::{AngleBracketedGenericArguments, Visibility, Attribute};
 
 #[derive(Clone)]
 /// Contains all data for the states
@@ -18,6 +18,8 @@ pub struct Transition {
 
 // Contains all data required to generate the state machine
 pub struct Machine {
+    pub attributes: Vec<Attribute>,
+    pub visibility: Option<Visibility>,
     pub name: Ident,
     pub init: State,
     pub states: Vec<State>,
