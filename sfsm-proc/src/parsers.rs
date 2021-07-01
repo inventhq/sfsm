@@ -1,11 +1,11 @@
 use proc_macro2::{Ident, Span};
 use proc_macro::{TokenStream};
-use syn::{Result, AngleBracketedGenericArguments, Visibility, Attribute};
+use syn::{Result, AngleBracketedGenericArguments, Visibility, Attribute, Error};
 use syn::parse::{Parse, ParseStream, Parser};
 use syn::punctuated::{Punctuated};
 use syn::Token;
 use convert_case::{Case, Casing};
-use crate::types::{State, Transition, Machine, StateEntry, MatchStateEntry};
+use crate::types::{State, Transition, Machine, StateEntry, MatchStateEntry, StateMessage, Messages, Message, MessageDir};
 use quote::ToTokens;
 
 impl State {
@@ -58,7 +58,7 @@ impl Parse for State {
 impl Parse for Transition {
     fn parse(input: ParseStream) -> Result<Self> {
         let src: State = input.parse()?;
-        input.parse::<syn::Token![-]>()?;
+        input.parse::<syn::Token![=]>()?;
         input.parse::<syn::Token![>]>()?;
         let dst: State = input.parse()?;
 
@@ -93,7 +93,7 @@ impl Parse for Machine {
 
         let state_group = input.parse::<proc_macro2::Group>()?;
         let state_group_ts: TokenStream = state_group.stream().into();
-        let state_parser = Punctuated::<State, Token![,]>::parse_separated_nonempty;
+        let state_parser = Punctuated::<State, Token![,]>::parse_terminated;
         let punctuated_state_names = state_parser.parse(state_group_ts)?;
         let states_names: Vec<State> = punctuated_state_names.into_iter().collect();
 
@@ -102,7 +102,7 @@ impl Parse for Machine {
         let transition_group = input.parse::<proc_macro2::Group>()?;
         let transition_group_ts: TokenStream = transition_group.stream().into();
         let transition_parser =
-            Punctuated::<Transition, Token![,]>::parse_separated_nonempty;
+            Punctuated::<Transition, Token![,]>::parse_terminated;
         let punctuated_transitions = transition_parser.parse(transition_group_ts)?;
         let transitions: Vec<Transition> = punctuated_transitions.into_iter().collect();
 
@@ -156,6 +156,71 @@ impl Parse for MatchStateEntry {
             state_entry,
             var_name
         })
+    }
+}
+impl Parse for Message {
+    fn parse(input: ParseStream) -> Result<Self> {
+        let name: Ident = input.parse()?;
 
+        // Only parse the generic argument if the bracket is opened and no - follows.
+        // If we only checked for the < the arrow <- would trigger the parsing.
+        let generics = if input.peek(Token![<])
+                    && !input.peek2(Token![-]) {
+            input.parse::<AngleBracketedGenericArguments>().ok()
+        } else {
+            None
+        };
+
+        Ok(Self {
+            name,
+            generics
+        })
+    }
+}
+
+impl Parse for StateMessage {
+    fn parse(input: ParseStream) -> Result<Self> {
+        let message: Message = input.parse()?;
+
+        let message_dir: MessageDir = if input.peek(syn::Token![->]) {
+            input.parse::<syn::Token![->]>()?;
+            MessageDir::Push(message)
+        } else if input.peek(syn::Token![<-]) {
+            input.parse::<syn::Token![<-]>()?;
+            MessageDir::Poll(message)
+        } else {
+            return Err(Error::new(input.span(), format!("A direction must be specified with either '->' or '<-' but got '{}' instead", input)))
+        };
+
+        let state: State = input.parse()?;
+        Ok(Self {
+            message: message_dir,
+            state
+        })
+    }
+}
+
+
+/// Parses the message definitions in the form of
+/// name, [M1 -> Foo, M2 <- Bar]
+impl Parse for Messages {
+    fn parse(input: ParseStream) -> Result<Self> {
+
+        let name: Ident = input.parse()?;
+        input.parse::<syn::Token![,]>()?;
+
+        let state_message_group = input.parse::<proc_macro2::Group>()?;
+        let state_message_group_ts: TokenStream = state_message_group.stream().into();
+        let state_message_parser = Punctuated::<StateMessage, Token![,]>::parse_terminated;
+        let punctuated_state_names = state_message_parser.parse(state_message_group_ts)?;
+        let messages: Vec<StateMessage> = punctuated_state_names.into_iter().collect();
+
+        let enum_name = Machine::enum_name(&name);
+
+        Ok(Self {
+            name,
+            enum_name,
+            messages
+        })
     }
 }

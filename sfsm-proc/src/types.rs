@@ -37,3 +37,29 @@ pub struct MatchStateEntry {
     pub state_entry: StateEntry,
     pub var_name: Ident,
 }
+
+// The actual message containing the struct name and optional generics arguments
+pub struct Message {
+    pub generics: Option<AngleBracketedGenericArguments>,
+    pub name: Ident,
+}
+
+// Enum containing the direction of the message. Can be either a push or poll message
+pub enum MessageDir {
+    Push(Message),
+    Poll(Message),
+}
+
+// Contains the target state plus all message information used to generate the necessary trait
+// implementations
+pub struct StateMessage {
+    pub state: State,
+    pub message: MessageDir,
+}
+
+// The whole message that will be used to generate the macro outputs
+pub struct Messages {
+    pub name: Ident,
+    pub enum_name: Ident,
+    pub messages: Vec<StateMessage>,
+}
