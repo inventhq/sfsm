@@ -1,5 +1,6 @@
 use quote::{quote, ToTokens};
-use crate::types::{Machine, State};
+use crate::types::{Machine, State, Messages, StateMessage, MessageDir};
+
 
 pub struct StateMachineToTokens<'a> {
     machine: &'a Machine,
@@ -39,9 +40,7 @@ impl ToTokens for StateMachineToTokens<'_> {
         }).collect();
 
         let token_steam = proc_macro2::TokenStream::from(quote! {
-
-            use sfsm::IsState;
-            use sfsm::SfsmError;
+            use sfsm::*;
 
             #(#attribute)*
             #vis enum #enum_name {
@@ -53,6 +52,8 @@ impl ToTokens for StateMachineToTokens<'_> {
                 states: #enum_name,
                 do_entry: bool,
             }
+
+            impl __private::Machine for #sfsm_name {}
 
             impl #sfsm_name {
                 pub fn new(data: #init_state) -> Self {
@@ -305,6 +306,108 @@ impl ToTokens for ExitTransitionToTokens<'_> {
         let token_steam = proc_macro2::TokenStream::from(quote! {
             #( Transition::<#transits>::exit(&mut state); )*
         });
+        tokens.extend(token_steam);
+    }
+}
+
+
+struct StateMessageToTokens<'a> {
+    state_message: &'a StateMessage,
+    messages: &'a Messages,
+}
+
+impl<'a> StateMessageToTokens<'a> {
+    pub fn new(state_message: &'a StateMessage, messages: &'a Messages) -> Self {
+        Self {
+            state_message,
+            messages,
+        }
+    }
+}
+
+impl ToTokens for StateMessageToTokens<'_> {
+    fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
+        let message_dir = &self.state_message.message;
+        let enum_entry = &self.state_message.state.enum_name;
+        let state = &self.state_message.state;
+        let enum_name = &self.messages.enum_name;
+        let sfsm_name = &self.messages.name;
+
+        let token_steam = match message_dir {
+            MessageDir::Push(message) => {
+                let message_name = &message.name;
+                let message_args = &message.generics;
+                proc_macro2::TokenStream::from(quote! {
+                    impl PushMessage<#state, #message_name#message_args> for #sfsm_name {
+                        fn push_message(&mut self, message: #message_name#message_args) -> Result<(), MessageError<#message_name#message_args>> {
+                            match self.states {
+                                #enum_name::#enum_entry(ref mut state_option) => {
+                                    if let Some(ref mut state) = state_option {
+                                        state.receive_message(message);
+                                        return Ok(())
+                                    }
+                                }
+                                _ => {
+                                    // Do nothing, this will return and error at the end of the function
+                                }
+                            }
+                            return Err(MessageError::StateIsNotActive(message));
+                        }
+                    }
+                })
+            }
+            MessageDir::Poll(message) => {
+                let message_name = &message.name;
+                let message_args = &message.generics;
+                proc_macro2::TokenStream::from(quote! {
+                    impl PollMessage<#state, #message_name#message_args> for #sfsm_name {
+                        fn poll_message(&mut self) -> Result<Option<#message_name#message_args>, MessageError<()>> {
+                            match self.states {
+                                #enum_name::#enum_entry(ref mut state_option) => {
+                                    if let Some(ref mut state) = state_option {
+                                        let message = state.return_message();
+                                        return Ok(message)
+                                    }
+                                }
+                                _ => {
+                                    // Do nothing, this will return and error at the end of the function
+                                }
+                            }
+                            return Err(MessageError::StateIsNotActive(()));
+                        }
+                    }
+                })
+            }
+        };
+
+        tokens.extend(token_steam);
+    }
+}
+
+pub struct MessagesToTokens<'a> {
+    messages: &'a Messages,
+}
+
+impl<'a> MessagesToTokens<'a> {
+    pub fn new(messages: &'a Messages) -> Self {
+        Self {
+            messages,
+        }
+    }
+}
+
+impl ToTokens for MessagesToTokens<'_> {
+    fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
+        let messages = &self.messages.messages;
+
+        let messages_to_tokens: Vec<StateMessageToTokens> = messages.into_iter().map(|message| {
+            StateMessageToTokens::new(message, self.messages)
+        }).collect();
+
+        let token_steam = proc_macro2::TokenStream::from(quote! {
+            #(#messages_to_tokens)*
+        });
+
         tokens.extend(token_steam);
     }
 }

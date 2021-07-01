@@ -57,8 +57,8 @@
 //!    ],
 //!    [
 //!         // Define all transitions with: Src -> Dst
-//!         Hike<Up> -> Picknic,
-//!         Picknic -> Hike<Down>
+//!         Hike<Up> => Picknic,
+//!         Picknic => Hike<Down>
 //!    ]
 //! );
 //!
