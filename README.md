@@ -1,4 +1,4 @@
-# Static finite state machine
+# State machine generator for embedded and no_std target
 
 Sfsm tries to achieve these objectives, by providing a state machine generator in sfsm-proc and
 a transition as well as state trait in sfsm-proc. With this, the user can specify the whole state
