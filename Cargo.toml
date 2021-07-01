@@ -1,6 +1,6 @@
 [package]
 name = "sfsm"
-version = "0.2.4"
+version = "0.2.6"
 authors = ["Samuel Schuepbach <schuepbs@gmail.com>"]
 edition = "2018"
 license = "MIT"
@@ -13,5 +13,5 @@ description = "Generate static state machines"
 members = ["sfsm-base", "sfsm-proc"]
 
 [dependencies]
-sfsm-proc = {path = "sfsm-proc", version = "0.2.4"}
-sfsm-base = {path = "sfsm-base", version = "0.1.2"}
+sfsm-proc = {path = "sfsm-proc", version = "0.2.6"}
+sfsm-base = {path = "sfsm-base", version = "0.1.4"}
