@@ -1,6 +1,47 @@
 use quote::{quote, ToTokens};
-use crate::types::{Machine, State, Messages, StateMessage, MessageDir};
+use crate::types::{Machine, State, Messages, StateMessage, MessageDir, Mode};
+use proc_macro2::TokenStream;
 
+pub struct TransitToErrorToTokens {}
+
+impl<'a> TransitToErrorToTokens {
+    fn wrap_if_fallible(machine: &'a Machine, tokens: TokenStream, current_state: &State, is_stop: bool) -> proc_macro2::TokenStream {
+        match &machine.mode {
+            Mode::NonFallible { .. } => {
+                proc_macro2::TokenStream::from(quote! {
+                    #tokens;
+                })
+            }
+            Mode::Fallible { .. } => {
+                let error_state_entry = &(machine.error_state).as_ref().expect("Internal error. Expected to have a error state.").enum_name;
+                let enum_name = &machine.enum_name;
+                let error_state = &(machine.error_state).as_ref().expect("Internal error. Expected to have a error state.");
+                let do_entry = if is_stop {
+                    None
+                } else {
+                    Some(proc_macro2::TokenStream::from(quote! {
+                        *do_entry = true;
+                    }))
+                };
+
+                if error_state.enum_name != current_state.enum_name {
+                    proc_macro2::TokenStream::from(quote! {
+                        if let Err(err) = #tokens {
+                            let mut err_state: #error_state = state.into();
+                            err_state.consume_error(err);
+                            #do_entry
+                            return Ok(#enum_name::#error_state_entry(Some(err_state)));
+                        }
+                    })
+                } else {
+                    proc_macro2::TokenStream::from(quote! {
+                        #tokens.map_err(|err| {ExtendedSfsmError::Custom(err)})?;
+                    })
+                }
+            }
+        }
+    }
+}
 
 pub struct StateMachineToTokens<'a> {
     machine: &'a Machine,
@@ -39,6 +80,9 @@ impl ToTokens for StateMachineToTokens<'_> {
             return IsStateToTokens::new(self.machine, state);
         }).collect();
 
+        let sfsm_error = &self.machine.sfsm_error;
+        let custom_error = &self.machine.custom_error;
+
         let token_steam = proc_macro2::TokenStream::from(quote! {
             use sfsm::*;
 
@@ -65,7 +109,7 @@ impl ToTokens for StateMachineToTokens<'_> {
                     }
                 }
 
-                pub fn step(&mut self) -> Result<(), SfsmError> {
+                pub fn step(&mut self) -> Result<(), #sfsm_error#custom_error> {
                     use #enum_name::*;
                     let ref mut e = self.states;
                     *e = match *e {
@@ -78,7 +122,7 @@ impl ToTokens for StateMachineToTokens<'_> {
                    return &self.states;
                 }
 
-                pub fn stop(mut self) -> Result<#enum_name, SfsmError> {
+                pub fn stop(mut self) -> Result<#enum_name, #sfsm_error#custom_error> {
                     match self.states {
                         # ( #exits )*,
                     }
@@ -93,7 +137,7 @@ impl ToTokens for StateMachineToTokens<'_> {
     }
 }
 
-struct StopToTokens<'a> {
+pub struct StopToTokens<'a> {
     machine: &'a Machine,
     state: &'a State,
 }
@@ -111,11 +155,20 @@ impl ToTokens for StopToTokens<'_> {
     fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
         let state_entry = &self.state.enum_name;
         let enum_name = &self.machine.enum_name;
-        let exit_transitions = ExitTransitionToTokens::new(&self.state.transits);
+        let exit_transitions = ExitTransitionToTokens::new(&self.state.transits, &self.machine, &self.state, true);
+
+        let state_trait = &self.machine.trait_definitions.state_trait;
+        let exit = &self.machine.trait_definitions.exit;
+        let sfsm_error = &self.machine.sfsm_error;
+
+        let exit_token_stream = TransitToErrorToTokens::wrap_if_fallible(&self.machine, proc_macro2::TokenStream::from(quote! {
+                #state_trait::#exit(&mut state)
+        }), &self.state, true);
+
         let token_steam = proc_macro2::TokenStream::from(quote! {
             #enum_name::#state_entry(ref mut state_option) => {
-                let mut state = state_option.take().ok_or(SfsmError::Internal)?;
-                State::exit(&mut state);
+                let mut state = state_option.take().ok_or(#sfsm_error::Internal)?;
+                #exit_token_stream
                 #exit_transitions
                 Ok(#enum_name::#state_entry(Some(state)))
             }
@@ -126,7 +179,7 @@ impl ToTokens for StopToTokens<'_> {
     }
 }
 
-struct IsStateToTokens<'a> {
+pub struct IsStateToTokens<'a> {
     machine: &'a Machine,
     state: &'a State,
 }
@@ -159,13 +212,11 @@ impl ToTokens for IsStateToTokens<'_> {
             }
 
         });
-
         tokens.extend(token_steam);
-
     }
 }
 
-struct StateEntriesToTokens<'a> {
+pub struct StateEntriesToTokens<'a> {
     state: &'a State,
 }
 
@@ -189,7 +240,7 @@ impl ToTokens for StateEntriesToTokens<'_> {
     }
 }
 
-struct StateToTokens<'a> {
+pub struct StateToTokens<'a> {
     machine: &'a Machine,
     state: &'a State,
 }
@@ -198,7 +249,7 @@ impl<'a> StateToTokens<'a> {
     pub fn new(machine: &'a Machine, state: &'a State) -> Self {
         Self {
             machine,
-            state
+            state,
         }
     }
 }
@@ -208,26 +259,58 @@ impl<'a> ToTokens for StateToTokens<'a> {
         let enum_name = &self.machine.enum_name;
         let state_entry = &self.state.enum_name;
         let state_transits = &self.state.transits;
+        let state = &self.state;
+        let sfsm_error = &self.machine.sfsm_error;
+        let custom_error = &self.machine.custom_error;
         let transition_checks: Vec<TransitionToTokens> = (&self.state.transits).into_iter().map(|trans| {
             TransitionToTokens::new(self.machine, self.state, trans)
         }).collect();
 
+        let state_trait = &self.machine.trait_definitions.state_trait;
+        let transit_trait = &self.machine.trait_definitions.transit_trait;
+        let execute = &self.machine.trait_definitions.execute;
+        let entry = &self.machine.trait_definitions.entry;
+
+        let state_entry_tokens = TransitToErrorToTokens::wrap_if_fallible(&self.machine, proc_macro2::TokenStream::from(quote! {
+                #state_trait::#entry(&mut state)
+        }), &self.state, false);
+
+        let state_execute_tokens = TransitToErrorToTokens::wrap_if_fallible(&self.machine, proc_macro2::TokenStream::from(quote! {
+                #state_trait::#execute(&mut state)
+        }), &self.state, false);
+
+        let transition_entry_tokens: Vec<TokenStream> = state_transits.into_iter().map(|transition| {
+            TransitToErrorToTokens::wrap_if_fallible(&self.machine, proc_macro2::TokenStream::from(quote! {
+                #transit_trait::<#transition>::#entry(&mut state)
+            }), &self.state, false)
+        }).collect();
+
+        let transition_execute_tokens: Vec<TokenStream> = state_transits.into_iter().map(|transition| {
+            TransitToErrorToTokens::wrap_if_fallible(&self.machine, proc_macro2::TokenStream::from(quote! {
+                #transit_trait::<#transition>::#execute(&mut state)
+            }), &self.state, false)
+        }).collect();
+
         let token_steam = proc_macro2::TokenStream::from(quote! {
                 #enum_name::#state_entry(ref mut state_option) => {
-                    let mut state = state_option.take().unwrap();
+                    fn run_state(state_option: &mut Option<#state>, do_entry: &mut bool) -> Result<#enum_name, #sfsm_error#custom_error> {
 
-                    if self.do_entry {
-                        State::entry(&mut state);
-                        #( Transition::<#state_transits>::entry(&mut state); )*
-                        self.do_entry = false;
-                    }
+                        let mut state = state_option.take().ok_or(#sfsm_error::Internal)?;
 
-                    State::execute(&mut state);
-                    #( Transition::<#state_transits>::execute(&mut state); )*
-                    #( #transition_checks )*
-                    {
-                        #enum_name::#state_entry(Some(state))
+                        if *do_entry {
+                            #state_entry_tokens
+                            #( #transition_entry_tokens )*
+                            *do_entry = false;
+                        }
+
+                        #state_execute_tokens
+                        #( #transition_execute_tokens )*
+                        #( #transition_checks )*
+                        {
+                            return Ok(#enum_name::#state_entry(Some(state)));
+                        }
                     }
+                    run_state(state_option, &mut self.do_entry)?
                 }
         });
 
@@ -247,7 +330,7 @@ impl ToTokens for State {
     }
 }
 
-struct TransitionToTokens<'a> {
+pub struct TransitionToTokens<'a> {
     machine: &'a Machine,
     state: &'a State,
     target: &'a State
@@ -269,18 +352,26 @@ impl ToTokens for TransitionToTokens<'_> {
         let target_state = self.target;
         let target_state_entry = &self.target.enum_name;
         let enum_name = &self.machine.enum_name;
-        let exit_transitions = ExitTransitionToTokens::new(&self.state.transits);
-        let token_steam = proc_macro2::TokenStream::from(quote! {
-            if Transition::<#target_state>::guard(&state) == TransitGuard::Transit {
+        let exit_transitions = ExitTransitionToTokens::new(&self.state.transits, self.machine, &self.state, false);
 
-                State::exit(&mut state);
+        let state_trait = &self.machine.trait_definitions.state_trait;
+        let transit_trait = &self.machine.trait_definitions.transit_trait;
+        let exit = &self.machine.trait_definitions.exit;
+
+        let exit_token_stream = TransitToErrorToTokens::wrap_if_fallible(&self.machine, proc_macro2::TokenStream::from(quote! {
+                #state_trait::#exit(&mut state)
+        }), &self.state, false);
+
+        let token_steam = proc_macro2::TokenStream::from(quote! {
+            if #transit_trait::<#target_state>::guard(&state) == TransitGuard::Transit {
+                #exit_token_stream
 
                 #exit_transitions
 
                 let mut next_state: #target_state = state.into();
 
-                self.do_entry = true;
-                #enum_name::#target_state_entry(Some(next_state))
+                *do_entry = true;
+                return Ok(#enum_name::#target_state_entry(Some(next_state)));
             } else
         });
 
@@ -288,14 +379,20 @@ impl ToTokens for TransitionToTokens<'_> {
     }
 }
 
-struct ExitTransitionToTokens<'a> {
+pub struct ExitTransitionToTokens<'a> {
+    machine: &'a Machine,
     transits: &'a Vec<State>,
+    state: &'a State,
+    is_stop: bool
 }
 
 impl<'a> ExitTransitionToTokens<'a> {
-    pub fn new(transits: &'a Vec<State>) -> Self {
+    pub fn new(transits: &'a Vec<State>, machine: &'a Machine, state: &'a State, is_stop: bool) -> Self {
         Self {
             transits,
+            machine,
+            state,
+            is_stop
         }
     }
 }
@@ -303,15 +400,24 @@ impl<'a> ExitTransitionToTokens<'a> {
 impl ToTokens for ExitTransitionToTokens<'_> {
     fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
         let transits = self.transits;
+        let transit_trait = &self.machine.trait_definitions.transit_trait;
+        let exit = &self.machine.trait_definitions.exit;
+
+        let exit_token_streams: Vec<proc_macro2::TokenStream> = transits.into_iter().map(|transits| {
+            TransitToErrorToTokens::wrap_if_fallible(&self.machine, proc_macro2::TokenStream::from(quote! {
+                #transit_trait::<#transits>::#exit(&mut state)
+            }), &self.state, self.is_stop)
+        }).collect();
+
         let token_steam = proc_macro2::TokenStream::from(quote! {
-            #( Transition::<#transits>::exit(&mut state); )*
+            #( #exit_token_streams )*
         });
         tokens.extend(token_steam);
     }
 }
 
 
-struct StateMessageToTokens<'a> {
+pub struct StateMessageToTokens<'a> {
     state_message: &'a StateMessage,
     messages: &'a Messages,
 }

@@ -1,5 +1,27 @@
-use proc_macro2::Ident;
+use proc_macro2::{Ident, TokenStream};
 use syn::{AngleBracketedGenericArguments, Visibility, Attribute};
+
+pub enum Mode {
+    NonFallible,
+    Fallible
+}
+
+pub struct TraitDefinitions {
+    pub transit_trait: TokenStream,
+    pub state_trait: TokenStream,
+    pub exit: TokenStream,
+    pub entry: TokenStream,
+    pub execute: TokenStream,
+}
+
+pub struct ErrorType {
+    pub error_name: Ident,
+    pub generics: Option<AngleBracketedGenericArguments>,
+}
+
+pub struct TryMachine {
+    pub state_machine: Machine,
+}
 
 #[derive(Clone)]
 /// Contains all data for the states
@@ -24,6 +46,11 @@ pub struct Machine {
     pub init: State,
     pub states: Vec<State>,
     pub enum_name: Ident,
+    pub sfsm_error: TokenStream,
+    pub custom_error: Option<TokenStream>,
+    pub trait_definitions: TraitDefinitions,
+    pub mode: Mode,
+    pub error_state: Option<State>,
 }
 
 // Contains data needed to generate generate a enum entry for a state
