@@ -1,8 +1,8 @@
 use sfsm::*;
 
 // The states
-pub struct MoveUp {}
-pub struct Grounded {
+pub struct Launch {}
+pub struct WaitForLaunch {
     boosters_started: bool
 }
 
@@ -28,7 +28,7 @@ pub enum RocketMalfunction {
 }
 
 // Implement all the functions for the various states
-impl TryState for MoveUp {
+impl TryState for Launch {
     type Error = RocketMalfunction;
     fn try_execute(&mut self) -> Result<(), Self::Error> {
         Err(RocketMalfunction::BoostersFellOff) // During the launch, the boosters fell off.
@@ -36,7 +36,7 @@ impl TryState for MoveUp {
     }
 }
 
-impl TryState for Grounded {
+impl TryState for WaitForLaunch {
     type Error = RocketMalfunction;
 
     fn try_entry(&mut self) -> Result<(), Self::Error> {
@@ -55,14 +55,14 @@ impl TryState for Grounded {
 }
 
 // Implement the various transitions
-impl Into<MoveUp> for Grounded {
-    fn into(self) -> MoveUp {
-        MoveUp {}
+impl Into<Launch> for WaitForLaunch {
+    fn into(self) -> Launch {
+        Launch {}
     }
 }
 
 // Start the launch
-impl TryTransition<MoveUp> for Grounded {
+impl TryTransition<Launch> for WaitForLaunch {
     fn guard(&self) -> TransitGuard {
         TransitGuard::Transit
     }
@@ -70,26 +70,26 @@ impl TryTransition<MoveUp> for Grounded {
 
 // Every state must implement a Into trait for the error state. Otherwise valuable data could get
 // lost.
-impl Into<HandleMalfunction> for MoveUp {
+impl Into<HandleMalfunction> for Launch {
     fn into(self) -> HandleMalfunction {
         HandleMalfunction::new()
     }
 }
-impl Into<HandleMalfunction> for Grounded {
+impl Into<HandleMalfunction> for WaitForLaunch {
     fn into(self) -> HandleMalfunction {
         HandleMalfunction::new()
     }
 }
 
 // Restart the launch as soon as the malfunction is handled
-impl TryTransition<Grounded> for HandleMalfunction {
+impl TryTransition<WaitForLaunch> for HandleMalfunction {
     fn guard(&self) -> TransitGuard {
         TransitGuard::Transit
     }
 }
-impl Into<Grounded> for HandleMalfunction {
-    fn into(self) -> Grounded {
-        Grounded {
+impl Into<WaitForLaunch> for HandleMalfunction {
+    fn into(self) -> WaitForLaunch {
+        WaitForLaunch {
             boosters_started: true
         }
     }
@@ -128,11 +128,11 @@ impl TryErrorState for HandleMalfunction {
 
 add_fallible_state_machine!(
     Rocket,                                 // Name of the state machine. Accepts a visibility modifier.
-    Grounded,                               // The initial state the state machine will start in
-    [Grounded, MoveUp, HandleMalfunction],  // All possible states
+    WaitForLaunch,                               // The initial state the state machine will start in
+    [WaitForLaunch, Launch, HandleMalfunction],  // All possible states
     [
-        Grounded => MoveUp,                 // All possible Transitions
-        HandleMalfunction => Grounded
+        WaitForLaunch => Launch,                 // All possible Transitions
+        HandleMalfunction => WaitForLaunch
     ],
     RocketMalfunction,                      // The error type
     HandleMalfunction                       // The error state
@@ -142,19 +142,19 @@ fn run_error_example() -> Result<(), ExtendedSfsmError<RocketMalfunction>> {
 
     let mut rocket = Rocket::new();
 
-    let standstill = Grounded {boosters_started: false};
-    rocket.start(standstill)?;
+    let wait_for_launch = WaitForLaunch {boosters_started: false};
+    rocket.start(wait_for_launch)?;
 
-    assert!(IsState::<Grounded>::is_state(&rocket));
+    assert!(IsState::<WaitForLaunch>::is_state(&rocket));
     rocket.step()?;
 
     assert!(IsState::<HandleMalfunction>::is_state(&rocket));
     rocket.step()?;
 
-    assert!(IsState::<Grounded>::is_state(&rocket));
+    assert!(IsState::<WaitForLaunch>::is_state(&rocket));
     rocket.step()?;
 
-    assert!(IsState::<MoveUp>::is_state(&rocket));
+    assert!(IsState::<Launch>::is_state(&rocket));
     let res = rocket.step();        // There is an error during the launch which causes a transition
                                     // to the error state. The error state knows it cannot handle
                                     // the error and thus aborts right in the entry of the error state
