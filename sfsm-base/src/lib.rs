@@ -6,14 +6,21 @@ pub mod fallible;
 /// Contains definitions used by a state machine without any error handling support
 pub mod non_fallible;
 
-// This trait will be implemented by the state machine itself.
+/// Trait that will be implemented by all state machines. The all implementations will be generated
+/// by the macro calls.
 pub trait StateMachine {
-    type InitialState;
-    type Error;
-    type StatesEnum;
+    type InitialState; /// The initial state of the state machine.
+    type Error;        /// The returned error
+    type StatesEnum;   /// The generator enum containing all states
+    /// Start function that must be called to before fist. It populates the internal enum with the
+    /// initial state. If step is called before start, the state machine will return an error.
     fn start(&mut self, state: Self::InitialState) -> Result<(), Self::Error>;
+    /// The step function that executes all states and transitions.
     fn step(&mut self) -> Result<(), Self::Error>;
+    /// When desired, the state machine can be stopped. When doing so, the internal states enum
+    /// is returned.
     fn stop(self) -> Result<Self::StatesEnum, Self::Error>;
+    /// Peek the internal states enum.
     fn peek_state(&self) -> &Self::StatesEnum;
 }
 
