@@ -36,17 +36,17 @@
 //! A state machine can be defined with the following macro call.
 //! ```ignore
 //! add_state_machine!(
-//!      Rocket,                                   // Name of the state machine. Accepts a visibility modifier.
-//!      Grounded,                                 // The initial state the state machine will start in
-//!      [Grounded, MoveUp],                       // All possible states
+//!      Rocket,                                        // Name of the state machine. Accepts a visibility modifier.
+//!      WaitForLaunch,                                 // The initial state the state machine will start in
+//!      [WaitForLaunch, Ascent],                       // All possible states
 //!      [
-//!          Grounded => MoveUp,                   // All transitions
+//!          WaitForLaunch => Ascent,                   // All transitions
 //!      ]
 //!  );
 //! ```
-//! This will generate a state machine called ``` Rocket ``` with an initial state in ``` Grounded ```.
-//! There are two possible states the state machine will be in - ``` Grounded ``` and ``` MoveUp ```.
-//! ``` Grounded ``` is the initial state and can transit to ``` MoveUp ``` due to the ``` Grounded => MoveUp ``` transition
+//! This will generate a state machine called ``` Rocket ``` with an initial state in ``` WaitForLaunch ```.
+//! There are two possible states the state machine will be in - ``` WaitForLaunch ``` and ``` Ascent ```.
+//! ``` WaitForLaunch ``` is the initial state and can transit to ``` Ascent ``` due to the ``` WaitForLaunch => Ascent ``` transition
 //! definition. A state machine can have as many states and transitions as desired but all of they must implement the ``` State ```
 //! and the according ``` Transition ``` traits.
 //!
@@ -58,11 +58,11 @@
 //! ```ignore
 //! add_fallible_state_machine!(
 //!     Rocket,                                 // Name of the state machine. Accepts a visibility modifier.
-//!     Grounded,                               // The initial state the state machine will start in
-//!     [Grounded, MoveUp, HandleMalfunction],  // All possible states
+//!     WaitForLaunch,                               // The initial state the state machine will start in
+//!     [WaitForLaunch, Ascent, HandleMalfunction],  // All possible states
 //!     [
-//!         Grounded => MoveUp,                 // All possible Transitions
-//!         HandleMalfunction => Grounded
+//!         WaitForLaunch => Ascent,                 // All possible Transitions
+//!         HandleMalfunction => WaitForLaunch
 //!     ],
 //!     RocketMalfunction,                      // The error type
 //!     HandleMalfunction                       // The error state
@@ -79,12 +79,12 @@
 //! add_messages!(
 //!      Rocket,
 //!      [
-//!          StartLiftoff -> Grounded,               // Command the CountDownToLiftoff state to liftoff
-//!          Status <- Liftoff,                      // Poll the status of the lift
+//!          StartLaunch -> WaitForLaunch,               // Command the WaitForLaunch state to launch
+//!          Status <- Launch,                           // Poll the status of the launch state
 //!      ]
 //!  );
 //! ```
-//! This creates the code to pass ``` StartLiftoff ``` into the ``` Grounded ``` state and allows to poll ``` Status ``` from the ``` Liftoff ```
+//! This creates the code to pass ``` StartLaunch ``` into the ``` WaitForLaunch ``` state and allows to poll ``` Status ``` from the ``` Launch ```
 //! state. Each state can have multiple receive and return messages, but it must implement the according ``` ReturnMessage ``` and ``` ReceiveMessage ``` traits.
 //! For more information, take a look at the [examples](https://gitlab.com/sfsm/sfsm/-/tree/develop/examples) or at the [doc](https://docs.rs/sfsm).
 

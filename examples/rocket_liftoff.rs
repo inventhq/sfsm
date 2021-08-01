@@ -1,32 +1,32 @@
 use sfsm::*;
 
 // First define all the state structs
-struct CountDownToLiftoff {
+struct WaitForLaunch {
     malfunction: bool,
     countdown: u32,
     tries: u32,
 }
-struct Liftoff {}
+struct Launch {}
 struct Abort {tries: u32}
 
 add_state_machine!(
-    Rocket,                                 // Name of the state machine
-    CountDownToLiftoff,                     // The state machine will start at the count down
-    [CountDownToLiftoff, Liftoff, Abort],   // All possible states
+    Rocket,                           // Name of the state machine
+    WaitForLaunch,                    // The state machine will start at the count down
+    [WaitForLaunch, Launch, Abort],   // All possible states
     [
-        CountDownToLiftoff => Liftoff,      // If all is ok, the liftoff will start
-        CountDownToLiftoff => Abort,        // If there is a malfunction, abort
-        Abort => CountDownToLiftoff,        // Once the malfunction is cleared, we can restart the countdown
+        WaitForLaunch => Launch,      // If all is ok, the launch will start
+        WaitForLaunch => Abort,       // If there is a malfunction, abort
+        Abort => WaitForLaunch,       // Once the malfunction is cleared, we can restart the countdown
     ]
 );
 
 // Add the countdown state implementation
-impl State for CountDownToLiftoff {
+impl State for WaitForLaunch {
     fn entry(&mut self) {
         println!("Begin countdown");
     }
     fn execute(&mut self) {
-        println!("{} seconds to liftoff", self.countdown);
+        println!("{} seconds to launch", self.countdown);
         // A malfunction has been found during the first run
         if self.countdown == 2 && self.tries == 0 {
             self.malfunction = true;
@@ -34,29 +34,29 @@ impl State for CountDownToLiftoff {
     }
 }
 
-// Implement the transitions for CountDownToLiftoff
+// Implement the transitions for WaitForLaunch
 // Begin with the transition to Abort
 // Every transition can define an entry, execute and exit function. The guard function must be defined.
-impl Into<Abort> for CountDownToLiftoff {
+impl Into<Abort> for WaitForLaunch {
     fn into(self) -> Abort {Abort {tries: self.tries}}
 }
-impl Transition<Abort> for CountDownToLiftoff {
+impl Transition<Abort> for WaitForLaunch {
     fn guard(&self) -> TransitGuard {
         return self.malfunction.into();  // Immediately transition if there is a malfunction
     }
 }
 
-// Then handle the transition to Liftoff
-impl Into<Liftoff> for CountDownToLiftoff {
-    fn into(self) -> Liftoff {Liftoff {}}
+// Then handle the transition to Launch
+impl Into<Launch> for WaitForLaunch {
+    fn into(self) -> Launch {Launch {}}
 }
-impl Transition<Liftoff> for CountDownToLiftoff {
+impl Transition<Launch> for WaitForLaunch {
     fn entry(&mut self) {
         self.countdown = 3;             // Set the countdown to 3 seconds
     }
 
     fn execute(&mut self) {
-        self.countdown -= 1;            // Count down the seconds to liftoff
+        self.countdown -= 1;            // Count down the seconds to launch
     }
     fn guard(&self) -> TransitGuard {
         if self.countdown == 0 {
@@ -76,76 +76,76 @@ impl State for Abort {
         println!("Fix malfunction");
     }
 }
-impl Into<CountDownToLiftoff> for Abort {
-    fn into(self) -> CountDownToLiftoff {
-        CountDownToLiftoff {
+impl Into<WaitForLaunch> for Abort {
+    fn into(self) -> WaitForLaunch {
+        WaitForLaunch {
             countdown: 0,
             malfunction: false,
             tries: self.tries,                       // Update the number of previous tries
         }
     }
 }
-impl Transition<CountDownToLiftoff> for Abort {
+impl Transition<WaitForLaunch> for Abort {
     fn guard(&self) -> TransitGuard {
         return TransitGuard::Transit;
     }
 }
 
-// And finally the liftoff state that has no transitions
-impl State for Liftoff {
+// And finally the launch state that has no transitions
+impl State for Launch {
     fn entry(&mut self) {
         println!("Firing up boosters");
     }
 }
 
 
-fn run_liftoff_sequence() -> Result<(), SfsmError> {
+fn run_launch_sequence() -> Result<(), SfsmError> {
 
     let mut rocket = Rocket::new();
 
-    let countdown = CountDownToLiftoff {
+    let wait_for_launch = WaitForLaunch {
         tries: 0,
         malfunction: false,
         countdown: 0,
     };
-    rocket.start(countdown)?;
+    rocket.start(wait_for_launch)?;
 
     // Check the initial state
-    assert!(IsState::<CountDownToLiftoff>::is_state(&rocket));
+    assert!(IsState::<WaitForLaunch>::is_state(&rocket));
     rocket.step()?;
 
-    assert!(IsState::<CountDownToLiftoff>::is_state(&rocket));
+    assert!(IsState::<WaitForLaunch>::is_state(&rocket));
     rocket.step()?;
 
     assert!(IsState::<Abort>::is_state(&rocket));
     rocket.step()?;
 
-    assert!(IsState::<CountDownToLiftoff>::is_state(&rocket));
+    assert!(IsState::<WaitForLaunch>::is_state(&rocket));
     rocket.step()?;
 
-    assert!(IsState::<CountDownToLiftoff>::is_state(&rocket));
+    assert!(IsState::<WaitForLaunch>::is_state(&rocket));
     rocket.step()?;
 
-    assert!(IsState::<CountDownToLiftoff>::is_state(&rocket));
+    assert!(IsState::<WaitForLaunch>::is_state(&rocket));
     rocket.step()?;
 
     // Now we should be lifting off
-    assert!(IsState::<Liftoff>::is_state(&rocket));
+    assert!(IsState::<Launch>::is_state(&rocket));
     rocket.step()?;
 
     Ok(())
 }
 
 fn main() {
-    run_liftoff_sequence().unwrap();
+    run_launch_sequence().unwrap();
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::run_liftoff_sequence;
+    use crate::run_launch_sequence;
 
     #[test]
-    fn liftoff_sequence() {
-        run_liftoff_sequence().unwrap();
+    fn launch_sequence() {
+        run_launch_sequence().unwrap();
     }
 }

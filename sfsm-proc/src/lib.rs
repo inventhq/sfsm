@@ -27,21 +27,21 @@ use crate::types::{MatchStateEntry, Machine, TryMachine, Messages};
 ///
 /// An example might look like this (Some trait and function implementations are missing)
 /// ```ignore
-/// struct Up {}
-/// struct Down {}
-/// struct Move<T> {}
-/// impl State for Move<Up> { ... }
-/// impl State for Move<Down> { ... }
-/// impl Transition<Move<Up>> for Move<Down> { ... }
-/// impl Transition<Move<Down>> for Move<Up> { ... }
+/// struct Ascent {}
+/// struct Descent {}
+/// struct Action<T> {}
+/// impl State for Action<Ascent> { ... }
+/// impl State for Action<Descent> { ... }
+/// impl Transition<Action<Ascent>> for Action<Descent> { ... }
+/// impl Transition<Action<Descent>> for Action<Ascent> { ... }
 /// add_state_machine!(
 ///         #[derive(Debug)]
 ///         pub Rocket,
-///         Move<Up>,
-///         [Move<Up>, Move<Down>],
+///         Action<Ascent>,
+///         [Action<Ascent>, Action<Descent>],
 ///         [
-///             Move<Up> => Move<Down>
-///             Move<Down> => Move<Up>
+///             Action<Ascent> => Action<Descent>
+///             Action<Descent> => Action<Ascent>
 ///         ]
 /// );
 ///```
@@ -80,25 +80,25 @@ pub fn add_state_machine(input: TokenStream) -> TokenStream {
 ///
 /// An example might look like this (Some trait and function implementations are missing).
 /// ```ignore
-/// struct MoveUp {} // MoveUp state
-/// struct Grounded {} // Grounded state
+/// struct Ascent {} // Ascent state
+/// struct WaitForLaunch {} // WaitForLaunch state
 /// // The error state
 /// struct HandleMalfunction {}
 /// // The error returned by all states and transitions
 /// enum RocketMalfunction {}
 ///
 /// // The implementations of the states
-/// impl TryState for MoveUp {
+/// impl TryState for Ascent {
 ///     type Error = RocketMalfunction;
 /// }
-/// impl TryState for Grounded {
+/// impl TryState for WaitForLaunch {
 ///     type Error = RocketMalfunction;
 /// }
 /// impl TryState for HandleMalfunction {
 ///     type Error = RocketMalfunction;
 /// }
-/// impl TryTransition<Grounded> for HandleMalfunction {}
-/// impl TryTransition<MoveUp> for Grounded {}
+/// impl TryTransition<WaitForLaunch> for HandleMalfunction {}
+/// impl TryTransition<Ascent> for WaitForLaunch {}
 ///
 /// // The TryErrorState implementation for the error state
 /// impl TryErrorState for HandleMalfunction {
@@ -109,11 +109,11 @@ pub fn add_state_machine(input: TokenStream) -> TokenStream {
 ///
 /// add_fallible_state_machine!(
 ///     Rocket,
-///     Grounded,
-///     [Grounded, MoveUp, HandleMalfunction],
+///     WaitForLaunch,
+///     [WaitForLaunch, Ascent, HandleMalfunction],
 ///     [
-///         Grounded => MoveUp,
-///         HandleMalfunction => Grounded
+///         WaitForLaunch => Ascent,
+///         HandleMalfunction => WaitForLaunch
 ///     ],
 ///     RocketMalfunction,
 ///     HandleMalfunction
@@ -150,17 +150,17 @@ pub fn add_fallible_state_machine(input: TokenStream) -> TokenStream {
 /// For each message, the source/target state must implement the according ``` ReceiveMessage ``` or ``` ReturnMessage ``` trait.
 /// An example might look like this.
 /// ```ignore
-/// struct Liftoff {}
+/// struct Launch {}
 /// struct Land {}
 /// struct Command<T> {}
 /// struct Status { height: float32, speed: float32}
 /// add_messages!(
 ///         Rocket,
 ///         [
-///             Command<Liftoff> -> Move<Down>,
-///             Command<Land> -> Move<Up>,
-///             Status <- Move<Up>
-///             Status <- Move<Down>
+///             Command<Launch> -> Action<Descent>,
+///             Command<Land> -> Action<Ascent>,
+///             Status <- Action<Ascent>
+///             Status <- Action<Descent>
 ///         ]
 /// );
 ///```
