@@ -6,17 +6,15 @@ pub mod fallible;
 /// Contains definitions used by a state machine without any error handling support
 pub mod non_fallible;
 
-pub mod __protected {
-    // This trait will be implemented by the state machine itself.
-    pub trait StateMachine {
-        type InitialState;
-        type Error;
-        type StatesEnum;
-        fn start(&mut self, state: Self::InitialState) -> Result<(), Self::Error>;
-        fn step(&mut self) -> Result<(), Self::Error>;
-        fn stop(self) -> Result<Self::StatesEnum, Self::Error>;
-        fn peek_state(&self) -> &Self::StatesEnum;
-    }
+// This trait will be implemented by the state machine itself.
+pub trait StateMachine {
+    type InitialState;
+    type Error;
+    type StatesEnum;
+    fn start(&mut self, state: Self::InitialState) -> Result<(), Self::Error>;
+    fn step(&mut self) -> Result<(), Self::Error>;
+    fn stop(self) -> Result<Self::StatesEnum, Self::Error>;
+    fn peek_state(&self) -> &Self::StatesEnum;
 }
 
 /// Enum used to indicate to the guard function if the transition should transit to the
@@ -67,7 +65,7 @@ impl From<bool> for TransitGuard {
 /// let is_in_state: bool = IsState::<State>::is_state(&sfsm);
 /// ```
 ///
-pub trait IsState<State>: __protected::StateMachine {
+pub trait IsState<State>: StateMachine {
     fn is_state(&self) -> bool;
 }
 
@@ -105,7 +103,7 @@ pub trait ReturnMessage<Message> {
 ///```
 /// This will call the receive_message function of 'FooState' if it implemented the ReceiveMessage
 /// trait for message 'FooMessage' and it has been declared to do so with the add_message! macro.
-pub trait PushMessage<State, Message>: __protected::StateMachine {
+pub trait PushMessage<State, Message>: StateMachine {
     fn push_message(&mut self, message: Message) -> Result<(), MessageError<Message>>;
 }
 
@@ -117,6 +115,6 @@ pub trait PushMessage<State, Message>: __protected::StateMachine {
 ///```
 /// This will call the return_message function of 'FooState' if it implemented the ReturnMessage
 /// trait for message 'FooMessage' and it has been declared to do so with the add_message! macro.
-pub trait PollMessage<State, Message>: __protected::StateMachine {
+pub trait PollMessage<State, Message>: StateMachine {
     fn poll_message(&mut self) -> Result<Option<Message>, MessageError<()>>;
 }

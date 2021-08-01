@@ -100,7 +100,6 @@ impl ToTokens for StateMachineToTokens<'_> {
 
         let token_steam = proc_macro2::TokenStream::from(quote! {
             use sfsm::*;
-            use sfsm::__protected::*;
 
             #(#attribute)*
             #vis enum #enum_name {
@@ -120,7 +119,7 @@ impl ToTokens for StateMachineToTokens<'_> {
                 }
             }
 
-            impl __protected::StateMachine for #sfsm_name {
+            impl StateMachine for #sfsm_name {
                 type InitialState = #init_state;
                 type Error = #sfsm_error#custom_error;
                 type StatesEnum = #enum_name;
