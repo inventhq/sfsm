@@ -106,11 +106,13 @@ impl ReturnMessage<Status> for Liftoff {
 
 fn run_liftoff_sequence_with_message() -> Result<(), SfsmError> {
 
+    let mut rocket = Rocket::new();
+
     let countdown = CountDownToLiftoff {
         malfunction: false,
         do_liftoff: false,
     };
-    let mut rocket = Rocket::new(countdown);
+    rocket.start(countdown)?;
 
     // Check the initial state
     assert!(IsState::<CountDownToLiftoff>::is_state(&rocket));
@@ -163,7 +165,7 @@ mod tests {
     use crate::run_liftoff_sequence_with_message;
 
     #[test]
-    fn simple_example() {
+    fn liftoff_sequence_with_message() {
         run_liftoff_sequence_with_message().unwrap();
     }
 }

@@ -50,8 +50,10 @@ impl State for Move<Down> {
 
 fn run_basic_extended_example() -> Result<(), SfsmError> {
 
+    let mut rocket = Rocket::new();
+
     let standstill = Move {phantom: PhantomData};
-    let mut rocket = Rocket::new(standstill);
+    rocket.start(standstill)?;
 
     assert!(IsState::<Move<Grounded>>::is_state(&rocket));
     rocket.step()?;
@@ -86,7 +88,7 @@ mod tests {
     use crate::run_basic_extended_example;
 
     #[test]
-    fn simple_example() {
+    fn basic_extended_example() {
         run_basic_extended_example().unwrap();
     }
 }

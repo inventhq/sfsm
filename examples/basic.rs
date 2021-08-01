@@ -69,11 +69,14 @@ impl State for MoveUp {
 
 fn run_basic_example() -> Result<(), SfsmError> {
 
-    // The initial state has to be manually created
-    let standstill = Grounded {};
-    // Then the state machine can be started. Note: This corresponds to the name given in the
+    // Now the state machine can be instantiated. Note: This corresponds to the name given in the
     // add_state_machine macro.
-    let mut rocket = Rocket::new(standstill);
+    let mut rocket = Rocket::new();
+
+    // Once instantiated, the state machine must be started. For this, the initial state must
+    // be manually generated and then be moved into the state machine to start it.
+    let standstill = Grounded {};
+    rocket.start(standstill)?;
 
     // The IsState trait can be used to check in which state the state machine is in.
     assert!(IsState::<Grounded>::is_state(&rocket));
@@ -110,7 +113,7 @@ mod tests {
     use crate::run_basic_example;
 
     #[test]
-    fn simple_example() {
+    fn basic_example() {
         run_basic_example().unwrap();
     }
 }

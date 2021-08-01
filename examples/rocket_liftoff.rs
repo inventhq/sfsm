@@ -101,12 +101,14 @@ impl State for Liftoff {
 
 fn run_liftoff_sequence() -> Result<(), SfsmError> {
 
+    let mut rocket = Rocket::new();
+
     let countdown = CountDownToLiftoff {
         tries: 0,
         malfunction: false,
         countdown: 0,
     };
-    let mut rocket = Rocket::new(countdown);
+    rocket.start(countdown)?;
 
     // Check the initial state
     assert!(IsState::<CountDownToLiftoff>::is_state(&rocket));
@@ -143,7 +145,7 @@ mod tests {
     use crate::run_liftoff_sequence;
 
     #[test]
-    fn simple_example() {
+    fn liftoff_sequence() {
         run_liftoff_sequence().unwrap();
     }
 }

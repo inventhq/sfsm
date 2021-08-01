@@ -140,8 +140,10 @@ add_fallible_state_machine!(
 
 fn run_error_example() -> Result<(), ExtendedSfsmError<RocketMalfunction>> {
 
+    let mut rocket = Rocket::new();
+
     let standstill = Grounded {boosters_started: false};
-    let mut rocket = Rocket::new(standstill);
+    rocket.start(standstill)?;
 
     assert!(IsState::<Grounded>::is_state(&rocket));
     rocket.step()?;
@@ -153,10 +155,9 @@ fn run_error_example() -> Result<(), ExtendedSfsmError<RocketMalfunction>> {
     rocket.step()?;
 
     assert!(IsState::<MoveUp>::is_state(&rocket));
-    rocket.step()?;
-
-    assert!(IsState::<HandleMalfunction>::is_state(&rocket));
-    let res = rocket.step();
+    let res = rocket.step();        // There is an error during the launch which causes a transition
+                                    // to the error state. The error state knows it cannot handle
+                                    // the error and thus aborts right in the entry of the error state
     assert!(res.is_err());
 
     Ok(())
