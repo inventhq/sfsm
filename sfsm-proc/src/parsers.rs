@@ -88,7 +88,7 @@ impl Parse for Machine {
         let name: Ident = input.parse()?;
         input.parse::<syn::Token![,]>()?;
 
-        let init: State = input.parse()?;
+        let init_definition: State = input.parse()?;
         input.parse::<syn::Token![,]>()?;
 
         let state_group = input.parse::<proc_macro2::Group>()?;
@@ -120,6 +120,10 @@ impl Parse for Machine {
             }
 
         }).collect();
+
+        let init = (&states).into_iter().find(|state| {
+            return init_definition.enum_name == state.enum_name;
+        }).expect("Internal error. Expected to find a state matching the init state").clone();
 
         let enum_name = Machine::enum_name(&name);
 
@@ -280,7 +284,7 @@ impl Parse for TryMachine {
         input.parse::<syn::Token![,]>()?;
         let error_type: ErrorType = input.parse().expect("Expected an error type");
         input.parse::<syn::Token![,]>()?;
-        let error_state: State = input.parse().expect("Expected an error state");
+        let error_state_entry: State = input.parse().expect("Expected an error state");
 
         let error_type_name = error_type.error_name;
         let error_type_generics = error_type.generics;
@@ -290,6 +294,11 @@ impl Parse for TryMachine {
         let sfsm_error = proc_macro2::TokenStream::from(quote! {
             ExtendedSfsmError
         });
+
+        let error_state = (&state_machine.states).into_iter().find(|state| {
+            return error_state_entry.enum_name == state.enum_name;
+        }).expect("Internal error. Expected to find a state matching the init state").clone();
+
         state_machine.mode = Mode::Fallible;
         state_machine.error_state = Some(error_state.clone());
         state_machine.sfsm_error = sfsm_error;
