@@ -111,16 +111,20 @@ impl ToTokens for StateMachineToTokens<'_> {
                 states: #enum_name,
             }
 
-            impl __private::Machine for #sfsm_name {}
-
             impl #sfsm_name {
                 pub fn new() -> Self {
                     Self {
                         states: #enum_name::#init_state_entry(None)
                     }
                 }
+            }
 
-                pub fn start(&mut self, mut state: #init_state) -> Result<(), #sfsm_error#custom_error> {
+            impl StateMachine for #sfsm_name {
+                type InitialState = #init_state;
+                type Error = #sfsm_error#custom_error;
+                type StatesEnum = #enum_name;
+
+                fn start(&mut self, mut state: Self::InitialState) -> Result<(), Self::Error> {
                     fn run_state(mut state: #init_state) -> Result<#enum_name, #sfsm_error#custom_error> {
                         #init_state_tokens
                         #(#init_transition_entry_tokens)*
@@ -130,7 +134,7 @@ impl ToTokens for StateMachineToTokens<'_> {
                     Ok(())
                 }
 
-                pub fn step(&mut self) -> Result<(), #sfsm_error#custom_error> {
+                fn step(&mut self) -> Result<(), Self::Error> {
                     use #enum_name::*;
                     let ref mut e = self.states;
                     *e = match *e {
@@ -139,13 +143,13 @@ impl ToTokens for StateMachineToTokens<'_> {
                     Ok(())
                 }
 
-                pub fn stop(mut self) -> Result<#enum_name, #sfsm_error#custom_error> {
+                fn stop(mut self) -> Result<Self::StatesEnum, Self::Error> {
                     match self.states {
                         # ( #exits )*,
                     }
                 }
 
-                pub fn peek_state(&self) -> &#enum_name {
+                fn peek_state(&self) -> &Self::StatesEnum {
                    return &self.states;
                 }
             }
