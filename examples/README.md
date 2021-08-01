@@ -5,6 +5,7 @@ The following folder contains a few examples to explain how to use the state mac
 - Basic Extended: Same as the basic example, but shows how generics and attributes can be used.
 - Rocket Liftoff: An bit more elaborate example of how an actual state machine could look like.
 - Messages: An example that shows how messages can be passed to states or be polled from states.
+- : An example that shows how messages can be passed to states or be polled from states.
 
 # Run
 Run the example with;

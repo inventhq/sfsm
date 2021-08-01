@@ -1,12 +1,13 @@
-mod parsers;
+use proc_macro::TokenStream;
+
+use quote::quote;
+use crate::generators::{StateMachineToTokens, MessagesToTokens};
+
 mod generators;
+mod parsers;
 mod types;
 
-use quote::{quote};
-use proc_macro::{TokenStream};
-use types::Machine;
-use crate::generators::{StateMachineToTokens, MessagesToTokens};
-use crate::types::{MatchStateEntry, Messages};
+use crate::types::{MatchStateEntry, Machine, TryMachine, Messages};
 
 /// Generates a state machine from a given state machine definition.
 ///
@@ -21,34 +22,109 @@ use crate::types::{MatchStateEntry, Messages};
 ///```
 /// - StateMachineName: Defines the name of the state machine.
 /// - InitialState: The initial state the state machine will start with.
-/// - [State1, State2, StateN, ...]: Specifies all state structs that will be known to the state machine. Each state must implement the State trait.
-/// - [StateN => StateN, ...]: Defines all transitions between states that can occur. For each transition, the state must implement the according Transition trait.
+/// - [State1, State2, StateN, ...]: Specifies all state structs that will be known to the state machine. Each state must implement the ``` State ``` trait.
+/// - [StateN => StateN, ...]: Defines all transitions between states that can occur. For each transition, the state must implement the according ``` Transition ``` trait.
 ///
-/// An example might look like this.
+/// An example might look like this (Some trait and function implementations are missing)
 /// ```ignore
-/// struct Up {}
-/// struct Down {}
-/// struct Move<T> {}
-/// impl State for Move<Up> { ... }
-/// impl State for Move<Down> { ... }
-/// impl Transition<Move<Up>> for Move<Down> { ... }
-/// impl Transition<Move<Down>> for Move<Up> { ... }
+/// struct Ascent {}
+/// struct Descent {}
+/// struct Action<T> {}
+/// impl State for Action<Ascent> { ... }
+/// impl State for Action<Descent> { ... }
+/// impl Transition<Action<Ascent>> for Action<Descent> { ... }
+/// impl Transition<Action<Descent>> for Action<Ascent> { ... }
 /// add_state_machine!(
 ///         #[derive(Debug)]
 ///         pub Rocket,
-///         Move<Up>,
-///         [Move<Up>, Move<Down>],
+///         Action<Ascent>,
+///         [Action<Ascent>, Action<Descent>],
 ///         [
-///             Move<Up> => Move<Down>
-///             Move<Down> => Move<Up>
+///             Action<Ascent> => Action<Descent>
+///             Action<Descent> => Action<Ascent>
 ///         ]
 /// );
 ///```
+/// For a more complete example, check out the examples folder.
 #[proc_macro]
 pub fn add_state_machine(input: TokenStream) -> TokenStream {
 
     let definition = syn::parse_macro_input!(input as Machine);
     let sfsm_to_tokens = StateMachineToTokens::new(&definition);
+
+    TokenStream::from(quote!{
+        #sfsm_to_tokens
+    })
+}
+
+
+/// Generates a state machine from a given state machine definition.
+///
+/// The state machine definition is expected too hold to the following pattern:
+/// ```ignore
+/// add_state_machine!(
+///     StateMachineName,
+///     InitialState,
+///     [State1, State2, StateN, ...],
+///     [StateN => StateN, ...],
+///     ErrorType,
+///     ErrorState
+/// );
+///```
+/// - StateMachineName: Defines the name of the state machine.
+/// - InitialState: The initial state the state machine will start with.
+/// - [State1, State2, StateN, ...]: Specifies all state structs that will be known to the state machine. Each state must implement the ``` State ``` trait.
+/// - [StateN => StateN, ...]: Defines all transitions between states that can occur. For each transition, the state must implement the according ``` Transition ``` trait.
+/// - ErrorType: Defines the type of error that can be returned from the states.
+/// - ErrorState: Defines the state that will act as the error handle state. It must implement the ``` TryErrorState ``` trait. Adding it to the state definitions is optional.
+///
+/// An example might look like this (Some trait and function implementations are missing).
+/// ```ignore
+/// struct Ascent {} // Ascent state
+/// struct WaitForLaunch {} // WaitForLaunch state
+/// // The error state
+/// struct HandleMalfunction {}
+/// // The error returned by all states and transitions
+/// enum RocketMalfunction {}
+///
+/// // The implementations of the states
+/// impl TryState for Ascent {
+///     type Error = RocketMalfunction;
+/// }
+/// impl TryState for WaitForLaunch {
+///     type Error = RocketMalfunction;
+/// }
+/// impl TryState for HandleMalfunction {
+///     type Error = RocketMalfunction;
+/// }
+/// impl TryTransition<WaitForLaunch> for HandleMalfunction {}
+/// impl TryTransition<Ascent> for WaitForLaunch {}
+///
+/// // The TryErrorState implementation for the error state
+/// impl TryErrorState for HandleMalfunction {
+///     fn consume_error(&mut self, err: Self::Error) {
+///         // Do something with the error
+///     }
+/// }
+///
+/// add_fallible_state_machine!(
+///     Rocket,
+///     WaitForLaunch,
+///     [WaitForLaunch, Ascent, HandleMalfunction],
+///     [
+///         WaitForLaunch => Ascent,
+///         HandleMalfunction => WaitForLaunch
+///     ],
+///     RocketMalfunction,
+///     HandleMalfunction
+/// );
+///```
+/// For a more complete example, check out the examples folder.
+#[proc_macro]
+pub fn add_fallible_state_machine(input: TokenStream) -> TokenStream {
+
+    let definition = syn::parse_macro_input!(input as TryMachine);
+    let sfsm_to_tokens = StateMachineToTokens::new(&definition.state_machine);
 
     TokenStream::from(quote!{
         #sfsm_to_tokens
@@ -71,20 +147,20 @@ pub fn add_state_machine(input: TokenStream) -> TokenStream {
 /// ```
 /// - StateMachineName: This must match a previously with add_state_machine defined state machine.
 /// - [ Message1 <- State1, ... ] Defines all messages that can be passed back an forth. The message specifies the struct/enum that will be used as a message, the <- arrow defines a poll and the -> a push and the state is the target or source state.
-/// For each message, the source/target state must implement the according ReceiveMessage or ReturnMessage trait.
+/// For each message, the source/target state must implement the according ``` ReceiveMessage ``` or ``` ReturnMessage ``` trait.
 /// An example might look like this.
 /// ```ignore
-/// struct Liftoff {}
+/// struct Launch {}
 /// struct Land {}
 /// struct Command<T> {}
 /// struct Status { height: float32, speed: float32}
 /// add_messages!(
 ///         Rocket,
 ///         [
-///             Command<Liftoff> -> Move<Down>,
-///             Command<Land> -> Move<Up>,
-///             Status <- Move<Up>
-///             Status <- Move<Down>
+///             Command<Launch> -> Action<Descent>,
+///             Command<Land> -> Action<Ascent>,
+///             Status <- Action<Ascent>
+///             Status <- Action<Descent>
 ///         ]
 /// );
 ///```

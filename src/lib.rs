@@ -1,6 +1,6 @@
 #![cfg_attr(not(test), no_std)]
 
-//! # Static finite state machine
+//! # Static state machine generator for no_std environments
 //!
 //! Sfsm tries to achieve these objectives, by providing a state machine generator in sfsm-proc and
 //! a transition as well as state trait in sfsm-proc. With this, the user can specify the whole state
@@ -36,31 +36,56 @@
 //! A state machine can be defined with the following macro call.
 //! ```ignore
 //! add_state_machine!(
-//!      Rocket,                                   // Name of the state machine. Accepts a visibility modifier.
-//!      Grounded,                                 // The initial state the state machine will start in
-//!      [Grounded, MoveUp],                       // All possible states
+//!      Rocket,                                        // Name of the state machine. Accepts a visibility modifier.
+//!      WaitForLaunch,                                 // The initial state the state machine will start in
+//!      [WaitForLaunch, Ascent],                       // All possible states
 //!      [
-//!          Grounded => MoveUp,                   // All transitions
+//!          WaitForLaunch => Ascent,                   // All transitions
 //!      ]
 //!  );
 //! ```
-//! This will define a state machine called Rocket with an initial state in Grounded.
-//! There are two possible states the state machine will be in. Grounded and MoveUp.
-//! Grounded is the initial state and can transit to MoveUp due to the Grounded => MoveUp transition
-//! defined. A state machine can have as many states and transitions as desired but all of they must implement the State
-//! and the according Transition traits.
+//! This will generate a state machine called ``` Rocket ``` with an initial state in ``` WaitForLaunch ```.
+//! There are two possible states the state machine will be in - ``` WaitForLaunch ``` and ``` Ascent ```.
+//! ``` WaitForLaunch ``` is the initial state and can transit to ``` Ascent ``` due to the ``` WaitForLaunch => Ascent ``` transition
+//! definition. A state machine can have as many states and transitions as desired but all of they must implement the ``` State ```
+//! and the according ``` Transition ``` traits.
+//!
+//! # Error handling state
+//! With the ``` add_fallible_state_machine ``` macro, a state machine can be defined that adds intrinsic error handling
+//! to the normal state machines. It allows to specify an error state and type. As soon as an error occurs, the state machine
+//! immediately jumps into the error state where the error can be handled.
+//! A fallible state machine can be defined with the following macro call:
+//! ```ignore
+//! add_fallible_state_machine!(
+//!     Rocket,                                 // Name of the state machine. Accepts a visibility modifier.
+//!     WaitForLaunch,                               // The initial state the state machine will start in
+//!     [WaitForLaunch, Ascent, HandleMalfunction],  // All possible states
+//!     [
+//!         WaitForLaunch => Ascent,                 // All possible Transitions
+//!         HandleMalfunction => WaitForLaunch
+//!     ],
+//!     RocketMalfunction,                      // The error type
+//!     HandleMalfunction                       // The error state
+//!  );
+//! ```
+//! Similar to the normal state machine, this will generate a state machine for which the user has to implement the behavior
+//! of the states and transitions. In the fallible state machine, the traits that have to be implemented are
+//! ``` TryState ``` and ``` TryTransition ``` traits. Additionally, the error state must implement the
+//! ``` TryErrorState ``` trait to implement how the error is handled.
+//!
+//! # Messaging system
 //! Additionally, messages to be passed into, or polled from the states can be defined.
 //! ```ignore
 //! add_messages!(
 //!      Rocket,
 //!      [
-//!          StartLiftoff -> Grounded,               // Command the CountDownToLiftoff state to liftoff
-//!          Status <- Liftoff,                      // Poll the status of the lift
+//!          StartLaunch -> WaitForLaunch,               // Command the WaitForLaunch state to launch
+//!          Status <- Launch,                           // Poll the status of the launch state
 //!      ]
 //!  );
 //! ```
-//! This creates the code to pass StartLiftoff into the Grounded state and allows to poll Status from the Liftoff
-//! state. Each state can have multiple receive and return messages, but it must implement the according ReturnMessage and ReceiveMessage traits.
+//! This creates the code to pass ``` StartLaunch ``` into the ``` WaitForLaunch ``` state and allows to poll ``` Status ``` from the ``` Launch ```
+//! state. Each state can have multiple receive and return messages, but it must implement the according ``` ReturnMessage ``` and ``` ReceiveMessage ``` traits.
 //! For more information, take a look at the [examples](https://gitlab.com/sfsm/sfsm/-/tree/develop/examples) or at the [doc](https://docs.rs/sfsm).
 
 extern crate sfsm_proc;
@@ -68,3 +93,5 @@ extern crate sfsm_base;
 
 pub use sfsm_proc::*;
 pub use sfsm_base::*;
+pub use sfsm_base::non_fallible::*;
+pub use sfsm_base::fallible::*;

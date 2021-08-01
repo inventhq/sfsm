@@ -4,9 +4,9 @@ use syn::{Result, AngleBracketedGenericArguments, Visibility, Attribute, Error};
 use syn::parse::{Parse, ParseStream, Parser};
 use syn::punctuated::{Punctuated};
 use syn::Token;
+use quote::{ToTokens, quote};
 use convert_case::{Case, Casing};
-use crate::types::{State, Transition, Machine, StateEntry, MatchStateEntry, StateMessage, Messages, Message, MessageDir};
-use quote::ToTokens;
+use crate::types::{State, Transition, Machine, StateEntry, MatchStateEntry, StateMessage, Messages, Message, MessageDir, ErrorType, TryMachine, Mode, TraitDefinitions};
 
 impl State {
     fn state_to_enum(name: &Ident, types: &Option<AngleBracketedGenericArguments>) -> Ident {
@@ -81,14 +81,14 @@ impl Machine {
 impl Parse for Machine {
     fn parse(input: ParseStream) -> Result<Self> {
 
-        let attributes = input.call(Attribute::parse_outer).unwrap();
+        let attributes = input.call(Attribute::parse_outer)?;
 
         let visibility: Option<Visibility> = input.parse().ok();
 
         let name: Ident = input.parse()?;
         input.parse::<syn::Token![,]>()?;
 
-        let init: State = input.parse()?;
+        let init_definition: State = input.parse()?;
         input.parse::<syn::Token![,]>()?;
 
         let state_group = input.parse::<proc_macro2::Group>()?;
@@ -121,7 +121,34 @@ impl Parse for Machine {
 
         }).collect();
 
+        let init = (&states).into_iter().find(|state| {
+            return init_definition.enum_name == state.enum_name;
+        }).expect("Internal error. Expected to find a state matching the init state").clone();
+
         let enum_name = Machine::enum_name(&name);
+
+        let sfsm_error = proc_macro2::TokenStream::from(quote! {
+            SfsmError
+        });
+
+        let trait_definitions = TraitDefinitions {
+            state_trait: proc_macro2::TokenStream::from(quote! {
+                State
+            }),
+            transit_trait: proc_macro2::TokenStream::from(quote! {
+                Transition
+            }),
+            entry: proc_macro2::TokenStream::from(quote! {
+                entry
+            }),
+            exit: proc_macro2::TokenStream::from(quote! {
+                exit
+            }),
+            execute: proc_macro2::TokenStream::from(quote! {
+                execute
+            }),
+        };
+
 
         Ok(Self {
             attributes,
@@ -130,6 +157,11 @@ impl Parse for Machine {
             init,
             states,
             enum_name,
+            sfsm_error,
+            trait_definitions,
+            mode: Mode::NonFallible,
+            error_state: None,
+            custom_error: None,
         })
     }
 }
@@ -221,6 +253,75 @@ impl Parse for Messages {
             name,
             enum_name,
             messages
+        })
+    }
+}
+
+impl Parse for ErrorType {
+    fn parse(input: ParseStream) -> Result<Self> {
+
+        let error_name: Ident = input.parse()?;
+
+        let generics = if input.peek(Token![<]) {
+            input.parse::<AngleBracketedGenericArguments>().ok()
+        } else {
+            None
+        };
+
+        Ok(Self {
+            error_name,
+            generics
+        })
+    }
+}
+
+/// Parses the state machine in the form of
+/// name, Foo, [Foo, Bar], [Foo -> Bar], ErrorType, ErrorState
+impl Parse for TryMachine {
+    fn parse(input: ParseStream) -> Result<Self> {
+
+        let mut state_machine: Machine = input.parse().expect("Expected a state machine definition");
+        input.parse::<syn::Token![,]>()?;
+        let error_type: ErrorType = input.parse().expect("Expected an error type");
+        input.parse::<syn::Token![,]>()?;
+        let error_state_entry: State = input.parse().expect("Expected an error state");
+
+        let error_type_name = error_type.error_name;
+        let error_type_generics = error_type.generics;
+        let custom_error = proc_macro2::TokenStream::from(quote! {
+            <#error_type_name#error_type_generics>
+        });
+        let sfsm_error = proc_macro2::TokenStream::from(quote! {
+            ExtendedSfsmError
+        });
+
+        let error_state = (&state_machine.states).into_iter().find(|state| {
+            return error_state_entry.enum_name == state.enum_name;
+        }).expect("Internal error. Expected to find a state matching the init state").clone();
+
+        state_machine.mode = Mode::Fallible;
+        state_machine.error_state = Some(error_state.clone());
+        state_machine.sfsm_error = sfsm_error;
+        state_machine.custom_error = Some(custom_error);
+        state_machine.trait_definitions = TraitDefinitions {
+                state_trait: proc_macro2::TokenStream::from(quote! {TryState}),
+                transit_trait: proc_macro2::TokenStream::from(quote! {TryTransition}),
+                entry: proc_macro2::TokenStream::from(quote! {try_entry}),
+                exit: proc_macro2::TokenStream::from(quote! {try_exit}),
+                execute: proc_macro2::TokenStream::from(quote! {try_execute}),
+        };
+
+        let states = &(state_machine.states);
+        let error_state_is_added = states.into_iter().any(|state| {
+            return error_state.enum_name == state.enum_name;
+        });
+
+        if !error_state_is_added {
+            state_machine.states.push(error_state);
+        }
+
+        Ok(Self {
+            state_machine
         })
     }
 }
