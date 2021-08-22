@@ -1,6 +1,7 @@
 use crate::TransitGuard;
 
 /// An error type that will be returned by the state machine if something goes wrong.
+/// 
 /// Specifically, when the state machine gets stuck in a state due to an internal error.
 /// The state machine is designed in a way where this should not happen, so this can largely be
 /// ignored. It is used in situations that are other wise hard to avoid without a panic!.
@@ -9,6 +10,8 @@ use crate::TransitGuard;
 #[derive(Debug)]
 #[non_exhaustive]
 pub enum SfsmError {
+    /// Returned if the state machine gets stuck due to an internal error or if the state
+    /// machine has not been started before stepping.
     Internal,
 }
 
@@ -21,13 +24,43 @@ pub enum SfsmError {
 pub trait State {
 
     /// Implement any behavior that hast to be executed when entering the state.
+    ///
+    /// ```rust
+    /// # use sfsm_base::non_fallible::State;
+    /// # struct FooState;
+    /// # impl State for FooState {
+    ///     fn entry(&mut self) {
+    ///         println!("Called right after being transitioned into");
+    ///     }
+    /// # }
+    /// ```
     fn entry(&mut self) {}
 
     /// Implement any behavior that has to be executed when the state is being executed.
     /// This function will be called as long as the state does not transit.
+    ///
+    /// ```rust
+    /// # use sfsm_base::non_fallible::State;
+    /// # struct FooState;
+    /// # impl State for FooState {
+    ///     fn execute(&mut self) {
+    ///         println!("Called during every step");
+    ///     }
+    /// # }
+    /// ```
     fn execute(&mut self) {}
 
     /// Implement any behavior that hast to be executed when exiting the state.
+    ///
+    /// ```rust
+    /// # use sfsm_base::non_fallible::State;
+    /// # struct FooState;
+    /// # impl State for FooState {
+    ///     fn exit(&mut self) {
+    ///         println!("Called before transitioning to another state");
+    ///     }
+    /// # }
+    /// ```
     fn exit(&mut self) {}
 }
 
@@ -36,24 +69,108 @@ pub trait State {
 /// All states can have none or many transitions.
 /// Both the entry and exit function will only be executed once for each state. The execute
 /// function will be executed as long as the state does not transition into another state.
-/// On top of the transition trait the state must implement the Into<DestinationState> trait
-/// to specify what happens with the source state data while transitioning and how the destination
-/// state is generated.
+/// On top of the transition trait the state must implement the ``` Into<DestinationState> ```
+/// trait to specify what happens with the source state data while transitioning and how the
+/// destination state is generated.
 /// The only non optional function is the guard function that specifies when the state transitions.
-/// Note: All transition behavior is always executed after the state trait behavior.
+/// Note: All transition are always run after the state.
 pub trait Transition<DestinationState>: Into<DestinationState> + State {
     /// Implement any behavior that hast to be executed when entering the state.
+    ///
+    /// ```rust
+    /// # use sfsm_base::non_fallible::{Transition, State};
+    /// # use sfsm_base::TransitGuard;
+    /// # struct FooState;
+    /// # struct BarState;
+    /// # impl State for FooState {};
+    /// # impl Into<BarState> for FooState {
+    /// #     fn into(self) -> BarState {
+    /// #         BarState{}
+    /// #     }
+    /// # }
+    ///
+    /// # impl Transition<BarState> for FooState {
+    ///     fn exit(&mut self) {
+    ///         println!("Called before transitioning to another state");
+    ///     }
+    /// #    fn guard(&self) -> TransitGuard {
+    /// #            todo!()
+    /// #    }
+    /// # }
+    /// ```
     fn entry(&mut self) {}
 
     /// Implement any behavior that has to be executed when the state is being executed.
     /// This function will be called as long as the state does not transit.
+    /// ```rust
+    /// # use sfsm_base::non_fallible::{Transition, State};
+    /// # use sfsm_base::TransitGuard;
+    /// # struct FooState;
+    /// # struct BarState;
+    /// # impl State for FooState {};
+    /// # impl Into<BarState> for FooState {
+    /// #     fn into(self) -> BarState {
+    /// #         BarState{}
+    /// #     }
+    /// # }
+    ///
+    /// # impl Transition<BarState> for FooState {
+    ///     fn execute(&mut self) {
+    ///         println!("Called before during every step");
+    ///     }
+    /// #    fn guard(&self) -> TransitGuard {
+    /// #            todo!()
+    /// #    }
+    /// # }
+    /// ```
     fn execute(&mut self) {}
 
     /// Implement any behavior that hast to be executed when exiting the state.
+    /// ```rust
+    /// # use sfsm_base::non_fallible::{Transition, State};
+    /// # use sfsm_base::TransitGuard;
+    /// # struct FooState;
+    /// # struct BarState;
+    /// # impl State for FooState {};
+    /// # impl Into<BarState> for FooState {
+    /// #     fn into(self) -> BarState { BarState{} }
+    /// # }
+    ///
+    /// # impl Transition<BarState> for FooState {
+    ///     fn exit(&mut self) {
+    ///         println!("Called before transitioning to another state");
+    ///     }
+    /// #    fn guard(&self) -> TransitGuard {
+    /// #            todo!()
+    /// #    }
+    /// # }
+    /// ```
     fn exit(&mut self) {}
 
-    /// Specifies when the state has to transit. As long as the guard returns false, the state
-    /// stays in the current state. When true is returned, the state machine will transit to
-    /// DestinationState
+    /// Specifies when the state has to transit. Return ``` TransitGuard::Remain ``` to remain
+    /// in the current state and ``` TransitGuard::Transit ``` to transit into the next one.
+    /// This is the only function that must be implemented by the transition.
+    /// The others are optional and situational.
+    /// ```rust
+    /// # use sfsm_base::non_fallible::{Transition, State};
+    /// # use sfsm_base::TransitGuard;
+    /// # struct FooState;
+    /// # struct BarState;
+    /// # impl State for FooState {};
+    /// # impl Into<BarState> for FooState {
+    /// #     fn into(self) -> BarState { BarState{} }
+    /// # }
+    ///
+    /// # impl Transition<BarState> for FooState {
+    ///     fn guard(&self) -> TransitGuard {
+    ///         let foo = 0;
+    ///         if foo == 0 {
+    ///             TransitGuard::Remain
+    ///         } else {
+    ///             TransitGuard::Transit
+    ///         }
+    ///     }
+    /// # }
+    /// ```
     fn guard(&self) -> TransitGuard;
 }

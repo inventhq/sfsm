@@ -1,6 +1,6 @@
 [package]
 name = "sfsm-base"
-version = "0.1.6"
+version = "0.3.0"
 authors = ["Samuel Schuepbach <schuepbs@gmail.com>"]
 edition = "2018"
 license = "MIT"
