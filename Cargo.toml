@@ -12,6 +12,12 @@ description = "Generate static state machines"
 [workspace]
 members = ["sfsm-base", "sfsm-proc"]
 
+
 [dependencies]
-sfsm-proc = {path = "sfsm-proc", version = "0.2.8"}
-sfsm-base = {path = "sfsm-base", version = "0.1.6"}
+sfsm-proc = {path = "sfsm-proc", version = "0.3.0"}
+sfsm-base = {path = "sfsm-base", version = "0.3.0"}
+
+
+[[example]]
+name = "basic"
+panic = "abort"

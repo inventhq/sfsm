@@ -99,7 +99,7 @@ impl ToTokens for StateMachineToTokens<'_> {
         let custom_error = &self.machine.custom_error;
 
         let token_steam = proc_macro2::TokenStream::from(quote! {
-            use sfsm::*;
+            use sfsm_base::*;
 
             #(#attribute)*
             #vis enum #enum_name {

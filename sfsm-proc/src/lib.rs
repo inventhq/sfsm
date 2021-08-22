@@ -1,12 +1,11 @@
-use proc_macro::TokenStream;
+#![doc = include_str!("../README.md")]
 
+use proc_macro::TokenStream;
 use quote::quote;
 use crate::generators::{StateMachineToTokens, MessagesToTokens};
-
 mod generators;
 mod parsers;
 mod types;
-
 use crate::types::{MatchStateEntry, Machine, TryMachine, Messages};
 
 /// Generates a state machine from a given state machine definition.
@@ -25,27 +24,57 @@ use crate::types::{MatchStateEntry, Machine, TryMachine, Messages};
 /// - [State1, State2, StateN, ...]: Specifies all state structs that will be known to the state machine. Each state must implement the ``` State ``` trait.
 /// - [StateN => StateN, ...]: Defines all transitions between states that can occur. For each transition, the state must implement the according ``` Transition ``` trait.
 ///
-/// An example might look like this (Some trait and function implementations are missing)
-/// ```ignore
-/// struct Ascent {}
-/// struct Descent {}
-/// struct Action<T> {}
-/// impl State for Action<Ascent> { ... }
-/// impl State for Action<Descent> { ... }
-/// impl Transition<Action<Ascent>> for Action<Descent> { ... }
-/// impl Transition<Action<Descent>> for Action<Ascent> { ... }
+/// An example might look like this:
+/// ```rust
+/// # use sfsm_proc::add_state_machine;
+/// # use sfsm_base::non_fallible::*;
+/// # use sfsm_base::*;
+/// # use std::marker::PhantomData;
+/// # #[derive(Debug)]
+/// # struct Ascent {}
+/// # #[derive(Debug)]
+/// # struct Descent {}
+/// # #[derive(Debug)]
+/// # struct Action<T> {
+/// #    phantom: PhantomData<T>
+/// # }
+/// # impl State for Action<Ascent> { }
+/// # impl State for Action<Descent> { }
+/// #
+/// # impl Into<Action<Ascent>> for Action<Descent> {
+/// #     fn into(self) -> Action<Ascent> {
+/// #         todo!()
+/// #     }
+/// # }
+/// # impl Transition<Action<Ascent>> for Action<Descent> {
+/// #    fn guard(&self) -> TransitGuard {
+/// #        todo!()
+/// #    }
+/// # }
+/// #
+/// # impl Into<Action<Descent>> for Action<Ascent> {
+/// #    fn into(self) -> Action<Descent> {
+/// #         todo!()
+/// #     }
+/// # }
+/// # impl Transition<Action<Descent>> for Action<Ascent> {
+/// #    fn guard(&self) -> TransitGuard {
+/// #        todo!()
+/// #    }
+/// # }
+/// #
 /// add_state_machine!(
 ///         #[derive(Debug)]
-///         pub Rocket,
+///         Rocket,
 ///         Action<Ascent>,
 ///         [Action<Ascent>, Action<Descent>],
 ///         [
-///             Action<Ascent> => Action<Descent>
+///             Action<Ascent> => Action<Descent>,
 ///             Action<Descent> => Action<Ascent>
 ///         ]
 /// );
 ///```
-/// For a more complete example, check out the examples folder.
+/// Expand the example to see more, or check out the examples folder for a more complete example.
 #[proc_macro]
 pub fn add_state_machine(input: TokenStream) -> TokenStream {
 
@@ -58,11 +87,11 @@ pub fn add_state_machine(input: TokenStream) -> TokenStream {
 }
 
 
-/// Generates a state machine from a given state machine definition.
+/// Generates a fallible state machine from a given state machine definition with error handling.
 ///
 /// The state machine definition is expected too hold to the following pattern:
 /// ```ignore
-/// add_state_machine!(
+/// add_fallible_state_machine!(
 ///     StateMachineName,
 ///     InitialState,
 ///     [State1, State2, StateN, ...],
@@ -78,35 +107,70 @@ pub fn add_state_machine(input: TokenStream) -> TokenStream {
 /// - ErrorType: Defines the type of error that can be returned from the states.
 /// - ErrorState: Defines the state that will act as the error handle state. It must implement the ``` TryErrorState ``` trait. Adding it to the state definitions is optional.
 ///
-/// An example might look like this (Some trait and function implementations are missing).
-/// ```ignore
-/// struct Ascent {} // Ascent state
-/// struct WaitForLaunch {} // WaitForLaunch state
-/// // The error state
-/// struct HandleMalfunction {}
-/// // The error returned by all states and transitions
-/// enum RocketMalfunction {}
-///
-/// // The implementations of the states
-/// impl TryState for Ascent {
-///     type Error = RocketMalfunction;
-/// }
-/// impl TryState for WaitForLaunch {
-///     type Error = RocketMalfunction;
-/// }
-/// impl TryState for HandleMalfunction {
-///     type Error = RocketMalfunction;
-/// }
-/// impl TryTransition<WaitForLaunch> for HandleMalfunction {}
-/// impl TryTransition<Ascent> for WaitForLaunch {}
-///
-/// // The TryErrorState implementation for the error state
-/// impl TryErrorState for HandleMalfunction {
-///     fn consume_error(&mut self, err: Self::Error) {
-///         // Do something with the error
-///     }
-/// }
-///
+/// ```rust
+/// # use sfsm_base::fallible::*;
+/// # use sfsm_proc::add_fallible_state_machine;
+/// # use sfsm_base::*;
+/// # struct Ascent {} // Ascent state
+/// # struct WaitForLaunch {} // WaitForLaunch state
+/// # // The error state
+/// # struct HandleMalfunction {}
+/// # // The error returned by all states and transitions
+/// # enum RocketMalfunction {}
+/// #
+/// # // The implementations of the states
+/// # impl TryState for Ascent {
+/// #     type Error = RocketMalfunction;
+/// # }
+/// # impl TryState for WaitForLaunch {
+/// #     type Error = RocketMalfunction;
+/// # }
+/// # impl TryState for HandleMalfunction {
+/// #     type Error = RocketMalfunction;
+/// # }
+/// #
+/// # impl Into<WaitForLaunch> for HandleMalfunction {
+/// #     fn into(self) -> WaitForLaunch {
+/// #         todo!()
+/// #     }
+/// # }
+/// #
+/// # impl Into<Ascent> for WaitForLaunch {
+/// #     fn into(self) -> Ascent {
+/// #         todo!()
+/// #     }
+/// # }
+/// #
+/// # impl TryTransition<WaitForLaunch> for HandleMalfunction {
+/// #    fn guard(&self) -> TransitGuard {
+/// #        todo!()
+/// #    }
+/// # }
+/// # impl TryTransition<Ascent> for WaitForLaunch {
+/// #    fn guard(&self) -> TransitGuard {
+/// #        todo!()
+/// #    }
+/// # }
+/// #
+/// # impl Into<HandleMalfunction> for WaitForLaunch {
+/// #     fn into(self) -> HandleMalfunction {
+/// #         todo!()
+/// #     }
+/// # }
+/// #
+/// # impl Into<HandleMalfunction> for Ascent {
+/// #     fn into(self) -> HandleMalfunction {
+/// #         todo!()
+/// #     }
+/// # }
+/// #
+/// # // The TryErrorState implementation for the error state
+/// # impl TryErrorState for HandleMalfunction {
+/// #     fn consume_error(&mut self, err: Self::Error) {
+/// #         // Do something with the error
+/// #     }
+/// # }
+/// #
 /// add_fallible_state_machine!(
 ///     Rocket,
 ///     WaitForLaunch,
@@ -119,7 +183,7 @@ pub fn add_state_machine(input: TokenStream) -> TokenStream {
 ///     HandleMalfunction
 /// );
 ///```
-/// For a more complete example, check out the examples folder.
+/// Expand the example to see more, or check out the examples folder for a more complete example.
 #[proc_macro]
 pub fn add_fallible_state_machine(input: TokenStream) -> TokenStream {
 
@@ -149,17 +213,65 @@ pub fn add_fallible_state_machine(input: TokenStream) -> TokenStream {
 /// - [ Message1 <- State1, ... ] Defines all messages that can be passed back an forth. The message specifies the struct/enum that will be used as a message, the <- arrow defines a poll and the -> a push and the state is the target or source state.
 /// For each message, the source/target state must implement the according ``` ReceiveMessage ``` or ``` ReturnMessage ``` trait.
 /// An example might look like this.
-/// ```ignore
-/// struct Launch {}
-/// struct Land {}
-/// struct Command<T> {}
-/// struct Status { height: float32, speed: float32}
+/// ```rust
+/// # use sfsm_proc::add_state_machine;
+/// # use sfsm_proc::add_messages;
+/// # use sfsm_base::*;
+/// # use std::marker::PhantomData;
+/// # #[derive(Debug)]
+/// # struct Launch {}
+/// # #[derive(Debug)]
+/// # struct Land {}
+/// # struct Ascent {}
+/// # struct Descent {}
+/// # struct Action<T> {
+/// #    phantom: PhantomData<T>
+/// # }
+/// # #[derive(Debug)]
+/// # struct Command<T> {
+/// #    phantom: PhantomData<T>
+/// # }
+/// # struct Status { height: f32, speed: f32}
+/// # impl State for Action<Ascent> { }
+/// # impl State for Action<Descent> { }
+/// #
+/// # impl ReceiveMessage<Command<Launch>> for Action<Descent> {
+/// #    fn receive_message(&mut self, message: Command<Launch>) {
+/// #        println!("Received message {:?}", message);
+/// #    }
+/// # }
+/// #
+/// # impl ReceiveMessage<Command<Land>> for Action<Ascent> {
+/// #    fn receive_message(&mut self, message: Command<Land>) {
+/// #        println!("Received message {:?}", message);
+/// #    }
+/// # }
+///#
+/// # impl ReturnMessage<Status> for Action<Ascent> {
+/// #    fn return_message(&mut self) -> Option<Status> {
+/// #        return Some(Status { height: 1.0f32, speed: 2.0f32 });
+/// #    }
+/// # }
+/// #
+/// # impl ReturnMessage<Status> for Action<Descent> {
+/// #    fn return_message(&mut self) -> Option<Status> {
+/// #        return Some(Status { height: 1.0f32, speed: 2.0f32 });
+/// #    }
+/// # }
+/// #
+/// # add_state_machine!(
+/// #         Rocket,
+/// #         Action<Ascent>,
+/// #         [Action<Descent>, Action<Ascent>],
+/// #         []
+/// # );
+/// #
 /// add_messages!(
 ///         Rocket,
 ///         [
 ///             Command<Launch> -> Action<Descent>,
 ///             Command<Land> -> Action<Ascent>,
-///             Status <- Action<Ascent>
+///             Status <- Action<Ascent>,
 ///             Status <- Action<Descent>
 ///         ]
 /// );
