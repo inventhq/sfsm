@@ -1,3 +1,3 @@
-# Static finite state machine
+# Static state machine generator for no_std environments base
 
-Contains proc macros used by the [sfsm](https://gitlab.com/sfsm/sfsm) crate. Head over there for a more detailed description of the project.
+Contains base traits used by the [sfsm](https://gitlab.com/sfsm/sfsm) library. Head over there for a more detailed description of the project.
