@@ -1,6 +1,6 @@
 [package]
 name = "sfsm"
-version = "0.2.8"
+version = "0.3.0"
 authors = ["Samuel Schuepbach <schuepbs@gmail.com>"]
 edition = "2018"
 license = "MIT"
@@ -16,8 +16,3 @@ members = ["sfsm-base", "sfsm-proc"]
 [dependencies]
 sfsm-proc = {path = "sfsm-proc", version = "0.3.0"}
 sfsm-base = {path = "sfsm-base", version = "0.3.0"}
-
-
-[[example]]
-name = "basic"
-panic = "abort"
