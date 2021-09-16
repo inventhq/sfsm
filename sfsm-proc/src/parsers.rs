@@ -4,30 +4,8 @@ use syn::{Result, AngleBracketedGenericArguments, Visibility, Attribute, Error};
 use syn::parse::{Parse, ParseStream, Parser};
 use syn::punctuated::{Punctuated};
 use syn::Token;
-use quote::{ToTokens, quote};
-use convert_case::{Case, Casing};
+use quote::{quote};
 use crate::types::{State, Transition, Machine, StateEntry, MatchStateEntry, StateMessage, Messages, Message, MessageDir, ErrorType, TryMachine, Mode, TraitDefinitions};
-
-impl State {
-    fn state_to_enum(name: &Ident, types: &Option<AngleBracketedGenericArguments>) -> Ident {
-        let args_string = if let Some(args) = types {
-            let mut args_string = args.into_token_stream().to_string();
-            args_string = str::replace(args_string.as_str(), "'", "");
-            args_string = str::replace(args_string.as_str(), "<", "");
-            args_string = str::replace(args_string.as_str(), ">", "");
-            args_string = str::replace(args_string.as_str(), "&", "");
-            args_string = str::replace(args_string.as_str(), " ", "");
-            args_string = str::replace(args_string.as_str(), ",", "");
-            args_string = str::replace(args_string.as_str(), "]", "");
-            args_string = str::replace(args_string.as_str(), "[", "");
-            args_string.to_case(Case::Pascal)
-        } else {
-            "".to_string()
-        };
-        Ident::new(format!("{}{}State", name.to_string(), args_string).as_str(),
-                   Span::call_site())
-    }
-}
 
 /// Parses the name of a state and optionally a type.
 /// For example Foo or Bar<T>
