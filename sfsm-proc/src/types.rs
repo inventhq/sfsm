@@ -1,4 +1,6 @@
-use proc_macro2::{Ident, TokenStream};
+use convert_case::{Case, Casing};
+use proc_macro2::{Ident, Span, TokenStream};
+use quote::{ToTokens, quote};
 use syn::{AngleBracketedGenericArguments, Visibility, Attribute};
 
 pub enum Mode {
@@ -30,6 +32,35 @@ pub struct State {
     pub transits: Vec<State>,
     pub generics: Option<AngleBracketedGenericArguments>,
     pub enum_name: Ident,
+}
+
+impl State {
+    pub fn state_to_enum(name: &Ident, types: &Option<AngleBracketedGenericArguments>) -> Ident {
+        let args_string = if let Some(args) = types {
+            let mut args_string = args.into_token_stream().to_string();
+            args_string = str::replace(args_string.as_str(), "'", "");
+            args_string = str::replace(args_string.as_str(), "<", "");
+            args_string = str::replace(args_string.as_str(), ">", "");
+            args_string = str::replace(args_string.as_str(), "&", "");
+            args_string = str::replace(args_string.as_str(), " ", "");
+            args_string = str::replace(args_string.as_str(), ",", "");
+            args_string = str::replace(args_string.as_str(), "]", "");
+            args_string = str::replace(args_string.as_str(), "[", "");
+            args_string.to_case(Case::Pascal)
+        } else {
+            "".to_string()
+        };
+        Ident::new(format!("{}{}State", name.to_string(), args_string).as_str(),
+                   Span::call_site())
+    }
+
+    pub fn get_name_type(&self) -> String {
+        let name = &self.name;
+        let generics = &self.generics;
+        TokenStream::from(quote! {
+            #name#generics
+        }).to_string()
+    }
 }
 
 /// Contains a transition from one state to another
@@ -69,6 +100,17 @@ pub struct MatchStateEntry {
 pub struct Message {
     pub generics: Option<AngleBracketedGenericArguments>,
     pub name: Ident,
+}
+
+
+impl Message {
+    pub fn get_name_type(&self) -> String {
+        let name = &self.name;
+        let generics = &self.generics;
+        TokenStream::from(quote! {
+            #name#generics
+        }).to_string()
+    }
 }
 
 // Enum containing the direction of the message. Can be either a push or poll message

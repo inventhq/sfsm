@@ -78,5 +78,30 @@ This creates the code to push ``` StartLaunch ``` into the ``` WaitForLaunch ```
 state. Each state can have multiple receive and return messages. 
 They must implement the according ``` ReturnMessage ``` and ``` ReceiveMessage ``` traits.
 
+## Features
+### Tracing
+While debugging a state machine, especially when field debugging, it is extremely helpful to have a log of how the state machine behaved, what transitions it went through and where an errors have occurred. With the trace feature, the sfsm state machines come with a built in mechanism to create such a log.
+To use it, simply enable the desired features and add a logger function. 
+
+The following tracing modes are available as a feature:
+```ignore
+[dependencies]
+sfsm = {
+    version = "*", 
+    features = [
+        "trace",            // Trace start, stop, transitions, entries and exits
+        "trace-messages",   // Trace executes 
+        "trace-steps"       // Trace message push and polls
+    ]}
+```
+The trace features can be combined how ever desired. 
+To get the tracing to work, a logger function must be provided by using the ``` #[sfsm_trace] ``` macro like in the following code snipped where the state machine is defined: 
+```ignore
+#[sfsm_trace]
+fn trace(log: &str) {
+    println!("{}", log);
+}
+```
+
 # Examples
 Complete examples can be found here [here](https://gitlab.com/sfsm/sfsm/-/tree/develop/examples) and more information in the [doc](https://docs.rs/sfsm).

@@ -1,6 +1,7 @@
 use quote::{quote, ToTokens};
-use crate::types::{Machine, State, Messages, StateMessage, MessageDir, Mode};
+use crate::{types::{Machine, State, Messages, StateMessage, MessageDir, Mode}};
 use proc_macro2::TokenStream;
+use crate::trace;
 
 pub struct TransitToErrorToTokens {}
 
@@ -16,6 +17,7 @@ impl<'a> TransitToErrorToTokens {
                 let error_state_entry = &(machine.error_state).as_ref().expect("Internal error. Expected to have a error state.").enum_name;
                 let enum_name = &machine.enum_name;
                 let error_state = &(machine.error_state).as_ref().expect("Internal error. Expected to have a error state.");
+                let trace_error_state = trace::trace(trace::format_log(&machine.name.to_string(), "Enter error state", ""));
                 if error_state.enum_name != current_state.enum_name {
                     let transit_trait = &machine.trait_definitions.transit_trait;
                     let entry = &machine.trait_definitions.entry;
@@ -28,6 +30,7 @@ impl<'a> TransitToErrorToTokens {
 
                     proc_macro2::TokenStream::from(quote! {
                         if let Err(err) = #tokens {
+                            #trace_error_state
                             let mut err_state: #error_state = state.into();
                             err_state.consume_error(err);
                             #state_trait::#entry(&mut err_state).map_err(|err| {ExtendedSfsmError::Custom(err)})?;
@@ -98,6 +101,9 @@ impl ToTokens for StateMachineToTokens<'_> {
         let sfsm_error = &self.machine.sfsm_error;
         let custom_error = &self.machine.custom_error;
 
+        let trace_start = trace::trace(trace::format_log(&sfsm_name.to_string(), "Start", &init_state.get_name_type()));
+        let trace_stop = trace::trace(trace::format_log(&sfsm_name.to_string(), "Stop", ""));
+
         let token_steam = proc_macro2::TokenStream::from(quote! {
             use sfsm_base::*;
 
@@ -125,12 +131,14 @@ impl ToTokens for StateMachineToTokens<'_> {
                 type StatesEnum = #enum_name;
 
                 fn start(&mut self, mut state: Self::InitialState) -> Result<(), Self::Error> {
+                    #[inline(always)]
                     fn run_state(mut state: #init_state) -> Result<#enum_name, #sfsm_error#custom_error> {
                         #init_state_tokens
                         #(#init_transition_entry_tokens)*
                         Ok(#enum_name::#init_state_entry(Some(state)))
                     }
                     self.states = run_state(state)?;
+                    #trace_start
                     Ok(())
                 }
 
@@ -144,6 +152,7 @@ impl ToTokens for StateMachineToTokens<'_> {
                 }
 
                 fn stop(mut self) -> Result<Self::StatesEnum, Self::Error> {
+                    #trace_stop
                     match self.states {
                         # ( #exits )*,
                     }
@@ -305,10 +314,14 @@ impl<'a> ToTokens for StateToTokens<'a> {
             }), &self.state)
         }).collect();
 
+        let trace_execute = trace::step(trace::format_log(&self.machine.name.to_string(), "Execute", &self.state.get_name_type()));
+
         let token_steam = proc_macro2::TokenStream::from(quote! {
                 #enum_name::#state_entry(ref mut state_option) => {
+                    #[inline(always)]
                     fn run_state(state_option: &mut Option<#state>) -> Result<#enum_name, #sfsm_error#custom_error> {
                         let mut state = state_option.take().ok_or(#sfsm_error::Internal)?;
+                        #trace_execute
                         #state_execute_tokens
                         #( #transition_execute_tokens )*
                         #( #transition_checks )*
@@ -382,17 +395,21 @@ impl ToTokens for TransitionToTokens<'_> {
                 #state_trait::#entry(&mut state)
             }), &self.state);
 
+        let trace_entry = trace::trace(trace::format_log(&self.machine.name.to_string(), "Enter", &self.target.get_name_type()));
+        let trace_exit = trace::trace(trace::format_log(&self.machine.name.to_string(), "Exit", &self.state.get_name_type()));
+        let trace_transit = trace::trace(trace::format_log(&self.machine.name.to_string(), "Transit", &format!("From {} to {}", &self.state.get_name_type(), &self.target.get_name_type())));
+
         let token_steam = proc_macro2::TokenStream::from(quote! {
             if #transit_trait::<#target_state>::guard(&state) == TransitGuard::Transit {
                 #exit_token_stream
-
                 #exit_transitions
-
+                #trace_exit
+                #trace_transit
                 let mut state: #target_state = state.into();
 
                 #state_entry_tokens
                 #(#transition_entry_tokens);*
-
+                #trace_entry
                 return Ok(#enum_name::#target_state_entry(Some(state)));
             } else
         });
@@ -463,12 +480,14 @@ impl ToTokens for StateMessageToTokens<'_> {
             MessageDir::Push(message) => {
                 let message_name = &message.name;
                 let message_args = &message.generics;
+                let trace_push = trace::message(trace::format_log(&self.messages.name.to_string(), "Push", &format!("{} to {}", &message.get_name_type(), &state.get_name_type())));
                 proc_macro2::TokenStream::from(quote! {
                     impl PushMessage<#state, #message_name#message_args> for #sfsm_name {
                         fn push_message(&mut self, message: #message_name#message_args) -> Result<(), MessageError<#message_name#message_args>> {
                             match self.states {
                                 #enum_name::#enum_entry(ref mut state_option) => {
                                     if let Some(ref mut state) = state_option {
+                                        #trace_push
                                         state.receive_message(message);
                                         return Ok(())
                                     }
@@ -485,6 +504,7 @@ impl ToTokens for StateMessageToTokens<'_> {
             MessageDir::Poll(message) => {
                 let message_name = &message.name;
                 let message_args = &message.generics;
+                let trace_poll = trace::message(trace::format_log(&self.messages.name.to_string(), "Poll", &format!("{} from {}", &message.get_name_type(), &state.get_name_type())));
                 proc_macro2::TokenStream::from(quote! {
                     impl PollMessage<#state, #message_name#message_args> for #sfsm_name {
                         fn poll_message(&mut self) -> Result<Option<#message_name#message_args>, MessageError<()>> {
@@ -492,6 +512,9 @@ impl ToTokens for StateMessageToTokens<'_> {
                                 #enum_name::#enum_entry(ref mut state_option) => {
                                     if let Some(ref mut state) = state_option {
                                         let message = state.return_message();
+                                        if (message.is_some()) {
+                                            #trace_poll
+                                        }
                                         return Ok(message)
                                     }
                                 }
