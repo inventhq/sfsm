@@ -1,11 +1,14 @@
 #![doc = include_str!("../README.md")]
 
 use proc_macro::TokenStream;
+use proc_macro2::Ident;
 use quote::quote;
+use syn::ItemFn;
 use crate::generators::{StateMachineToTokens, MessagesToTokens};
 mod generators;
 mod parsers;
 mod types;
+mod trace;
 use crate::types::{MatchStateEntry, Machine, TryMachine, Messages};
 
 /// Generates a state machine from a given state machine definition.
@@ -311,5 +314,17 @@ pub fn match_state_entry(input: TokenStream) -> TokenStream {
 
     TokenStream::from(quote!{
         #enum_name::#state_entry(#var_name)
+    })
+}
+
+#[proc_macro_attribute]
+pub fn sfsm_trace(_attr: TokenStream, item: TokenStream) -> TokenStream {
+    let trace_function: ItemFn = syn::parse_macro_input!(item as ItemFn);
+    let trace_function_ident: &Ident = &trace_function.sig.ident;
+    TokenStream::from(quote!{
+        #trace_function
+        fn __sfsm_trace(str: &str) {
+            #trace_function_ident(str);
+        }
     })
 }

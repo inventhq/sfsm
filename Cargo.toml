@@ -1,6 +1,6 @@
 [package]
 name = "sfsm"
-version = "0.3.0"
+version = "0.4.0"
 authors = ["Samuel Schuepbach <schuepbs@gmail.com>"]
 edition = "2018"
 license = "MIT"
@@ -12,7 +12,15 @@ description = "Generate static state machines"
 [workspace]
 members = ["sfsm-base", "sfsm-proc"]
 
-
 [dependencies]
-sfsm-proc = {path = "sfsm-proc", version = "0.3.0"}
-sfsm-base = {path = "sfsm-base", version = "0.3.0"}
+sfsm-proc = {path = "sfsm-proc", version = "0.4.0", default-features = false}
+sfsm-base = {path = "sfsm-base", version = "0.4.0"}
+
+[features]
+trace = ["sfsm-proc/trace"]
+trace-steps = ["sfsm-proc/trace-steps"]
+trace-messages = ["sfsm-proc/trace-messages"]
+
+[[example]]
+name = "tracing"
+required-features = ["trace"]
