@@ -101,7 +101,7 @@ impl Parse for Machine {
 
         let init = (&states).into_iter().find(|state| {
             return init_definition.enum_name == state.enum_name;
-        }).expect("Internal error. Expected to find a state matching the init state").clone();
+        }).expect("Expected to find the init state in the list of states").clone();
 
         let enum_name = Machine::enum_name(&name);
 
@@ -175,7 +175,7 @@ impl Parse for Message {
         // Only parse the generic argument if the bracket is opened and no - follows.
         // If we only checked for the < the arrow <- would trigger the parsing.
         let generics = if input.peek(Token![<])
-                    && !input.peek2(Token![-]) {
+            && !input.peek2(Token![-]) {
             input.parse::<AngleBracketedGenericArguments>().ok()
         } else {
             None
@@ -273,30 +273,22 @@ impl Parse for TryMachine {
             ExtendedSfsmError
         });
 
-        let error_state = (&state_machine.states).into_iter().find(|state| {
+        let states = &(state_machine.states);
+        let error_state = (&states).into_iter().find(|state| {
             return error_state_entry.enum_name == state.enum_name;
-        }).expect("Internal error. Expected to find a state matching the init state").clone();
+        }).expect("Expected to find the error state in the list of states").clone();
 
         state_machine.mode = Mode::Fallible;
         state_machine.error_state = Some(error_state.clone());
         state_machine.sfsm_error = sfsm_error;
         state_machine.custom_error = Some(custom_error);
         state_machine.trait_definitions = TraitDefinitions {
-                state_trait: proc_macro2::TokenStream::from(quote! {TryState}),
-                transit_trait: proc_macro2::TokenStream::from(quote! {TryTransition}),
-                entry: proc_macro2::TokenStream::from(quote! {try_entry}),
-                exit: proc_macro2::TokenStream::from(quote! {try_exit}),
-                execute: proc_macro2::TokenStream::from(quote! {try_execute}),
+            state_trait: proc_macro2::TokenStream::from(quote! {TryState}),
+            transit_trait: proc_macro2::TokenStream::from(quote! {TryTransition}),
+            entry: proc_macro2::TokenStream::from(quote! {try_entry}),
+            exit: proc_macro2::TokenStream::from(quote! {try_exit}),
+            execute: proc_macro2::TokenStream::from(quote! {try_execute}),
         };
-
-        let states = &(state_machine.states);
-        let error_state_is_added = states.into_iter().any(|state| {
-            return error_state.enum_name == state.enum_name;
-        });
-
-        if !error_state_is_added {
-            state_machine.states.push(error_state);
-        }
 
         Ok(Self {
             state_machine
