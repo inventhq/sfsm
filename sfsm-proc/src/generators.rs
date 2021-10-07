@@ -105,8 +105,6 @@ impl ToTokens for StateMachineToTokens<'_> {
         let trace_stop = trace::trace(trace::format_log(&sfsm_name.to_string(), "Stop", ""));
 
         let token_steam = proc_macro2::TokenStream::from(quote! {
-            use sfsm_base::*;
-
             #(#attribute)*
             #vis enum #enum_name {
                 #(#state_entries)*
