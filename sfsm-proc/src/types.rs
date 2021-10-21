@@ -14,6 +14,7 @@ pub struct TraitDefinitions {
     pub exit: TokenStream,
     pub entry: TokenStream,
     pub execute: TokenStream,
+    pub action: TokenStream,
 }
 
 pub struct ErrorType {

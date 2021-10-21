@@ -24,6 +24,7 @@ add_state_machine!(
 impl State for WaitForLaunch {
     fn entry(&mut self) {
         println!("Begin countdown");
+        self.countdown = 3;             // Set the countdown to 3 seconds
     }
     fn execute(&mut self) {
         println!("{} seconds to launch", self.countdown);
@@ -31,12 +32,13 @@ impl State for WaitForLaunch {
         if self.countdown == 2 && self.tries == 0 {
             self.malfunction = true;
         }
+        self.countdown -= 1;            // Count down the seconds to launch
     }
 }
 
 // Implement the transitions for WaitForLaunch
 // Begin with the transition to Abort
-// Every transition can define an entry, execute and exit function. The guard function must be defined.
+// Every transition can define an action method. The guard function must be defined.
 impl Into<Abort> for WaitForLaunch {
     fn into(self) -> Abort {Abort {tries: self.tries}}
 }
@@ -51,13 +53,6 @@ impl Into<Launch> for WaitForLaunch {
     fn into(self) -> Launch {Launch {}}
 }
 impl Transition<Launch> for WaitForLaunch {
-    fn entry(&mut self) {
-        self.countdown = 3;             // Set the countdown to 3 seconds
-    }
-
-    fn execute(&mut self) {
-        self.countdown -= 1;            // Count down the seconds to launch
-    }
     fn guard(&self) -> TransitGuard {
         if self.countdown == 0 {
             return TransitGuard::Transit;   // Transit as soon as the countdown reaches 0
