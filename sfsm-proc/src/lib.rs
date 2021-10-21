@@ -89,7 +89,6 @@ pub fn add_state_machine(input: TokenStream) -> TokenStream {
     })
 }
 
-
 /// Generates a fallible state machine from a given state machine definition with error handling.
 ///
 /// The state machine definition is expected too hold to the following pattern:

@@ -122,6 +122,9 @@ impl Parse for Machine {
             exit: proc_macro2::TokenStream::from(quote! {
                 exit
             }),
+            action: proc_macro2::TokenStream::from(quote! {
+                action
+            }),
             execute: proc_macro2::TokenStream::from(quote! {
                 execute
             }),
@@ -287,6 +290,7 @@ impl Parse for TryMachine {
             transit_trait: proc_macro2::TokenStream::from(quote! {TryTransition}),
             entry: proc_macro2::TokenStream::from(quote! {try_entry}),
             exit: proc_macro2::TokenStream::from(quote! {try_exit}),
+            action: proc_macro2::TokenStream::from(quote! {try_action}),
             execute: proc_macro2::TokenStream::from(quote! {try_execute}),
         };
 

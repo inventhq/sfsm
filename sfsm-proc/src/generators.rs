@@ -19,14 +19,8 @@ impl<'a> TransitToErrorToTokens {
                 let error_state = &(machine.error_state).as_ref().expect("Internal error. Expected to have a error state.");
                 let trace_error_state = trace::trace(trace::format_log(&machine.name.to_string(), "Enter error state", ""));
                 if error_state.enum_name != current_state.enum_name {
-                    let transit_trait = &machine.trait_definitions.transit_trait;
                     let entry = &machine.trait_definitions.entry;
                     let state_trait = &machine.trait_definitions.state_trait;
-                    let error_state_transition_entries: Vec<TokenStream> = (&error_state.transits).into_iter().map(|transition| {
-                        proc_macro2::TokenStream::from(quote! {
-                            #transit_trait::<#transition>::#entry(&mut err_state).map_err(|err| {ExtendedSfsmError::Custom(err)})?;
-                        })
-                    }).collect();
 
                     proc_macro2::TokenStream::from(quote! {
                         if let Err(err) = #tokens {
@@ -34,7 +28,6 @@ impl<'a> TransitToErrorToTokens {
                             let mut err_state: #error_state = state.into();
                             err_state.consume_error(err);
                             #state_trait::#entry(&mut err_state).map_err(|err| {ExtendedSfsmError::Custom(err)})?;
-                            #(#error_state_transition_entries)*
                             return Ok(#enum_name::#error_state_entry(Some(err_state)));
                         }
                     })
@@ -69,7 +62,6 @@ impl ToTokens for StateMachineToTokens<'_> {
         let attribute = &self.machine.attributes;
         let vis = &self.machine.visibility;
         let state_trait = &self.machine.trait_definitions.state_trait;
-        let transit_trait = &self.machine.trait_definitions.transit_trait;
         let entry = &self.machine.trait_definitions.entry;
 
         let states: Vec<StateToTokens> = (&self.machine.states).into_iter().map(|state| {
@@ -86,12 +78,6 @@ impl ToTokens for StateMachineToTokens<'_> {
 
         let is_states: Vec<IsStateToTokens> = (&self.machine.states).into_iter().map(|state| {
             return IsStateToTokens::new(self.machine, state);
-        }).collect();
-
-        let init_transition_entry_tokens: Vec<TokenStream> = (&init_state.transits).into_iter().map(|transition| {
-            TransitToErrorToTokens::wrap_if_fallible(&self.machine, proc_macro2::TokenStream::from(quote! {
-                #transit_trait::<#transition>::#entry(&mut state)
-            }), &init_state)
         }).collect();
 
         let init_state_tokens: TokenStream = TransitToErrorToTokens::wrap_if_fallible(&self.machine, proc_macro2::TokenStream::from(quote! {
@@ -132,7 +118,6 @@ impl ToTokens for StateMachineToTokens<'_> {
                     #[inline(always)]
                     fn run_state(mut state: #init_state) -> Result<#enum_name, #sfsm_error#custom_error> {
                         #init_state_tokens
-                        #(#init_transition_entry_tokens)*
                         Ok(#enum_name::#init_state_entry(Some(state)))
                     }
                     self.states = run_state(state)?;
@@ -187,7 +172,7 @@ impl ToTokens for StopToTokens<'_> {
     fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
         let state_entry = &self.state.enum_name;
         let enum_name = &self.machine.enum_name;
-        let exit_transitions = ExitTransitionToTokens::new(&self.state.transits, &self.machine, &self.state);
+        let transition_actions = ExitTransitionToTokens::new(&self.state.transits, &self.machine, &self.state);
 
         let state_trait = &self.machine.trait_definitions.state_trait;
         let exit = &self.machine.trait_definitions.exit;
@@ -201,7 +186,7 @@ impl ToTokens for StopToTokens<'_> {
             #enum_name::#state_entry(ref mut state_option) => {
                 let mut state = state_option.take().ok_or(#sfsm_error::Internal)?;
                 #exit_token_stream
-                #exit_transitions
+                #transition_actions
                 Ok(#enum_name::#state_entry(Some(state)))
             }
         });
@@ -290,7 +275,6 @@ impl<'a> ToTokens for StateToTokens<'a> {
     fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
         let enum_name = &self.machine.enum_name;
         let state_entry = &self.state.enum_name;
-        let state_transits = &self.state.transits;
         let state = &self.state;
         let sfsm_error = &self.machine.sfsm_error;
         let custom_error = &self.machine.custom_error;
@@ -299,18 +283,11 @@ impl<'a> ToTokens for StateToTokens<'a> {
         }).collect();
 
         let state_trait = &self.machine.trait_definitions.state_trait;
-        let transit_trait = &self.machine.trait_definitions.transit_trait;
         let execute = &self.machine.trait_definitions.execute;
 
         let state_execute_tokens = TransitToErrorToTokens::wrap_if_fallible(&self.machine, proc_macro2::TokenStream::from(quote! {
                 #state_trait::#execute(&mut state)
         }), &self.state);
-
-        let transition_execute_tokens: Vec<TokenStream> = state_transits.into_iter().map(|transition| {
-            TransitToErrorToTokens::wrap_if_fallible(&self.machine, proc_macro2::TokenStream::from(quote! {
-                #transit_trait::<#transition>::#execute(&mut state)
-            }), &self.state)
-        }).collect();
 
         let trace_execute = trace::step(trace::format_log(&self.machine.name.to_string(), "Execute", &self.state.get_name_type()));
 
@@ -321,7 +298,6 @@ impl<'a> ToTokens for StateToTokens<'a> {
                         let mut state = state_option.take().ok_or(#sfsm_error::Internal)?;
                         #trace_execute
                         #state_execute_tokens
-                        #( #transition_execute_tokens )*
                         #( #transition_checks )*
                         {
                             return Ok(#enum_name::#state_entry(Some(state)));
@@ -383,12 +359,6 @@ impl ToTokens for TransitionToTokens<'_> {
             return state.enum_name == *target_state_entry;
         }).expect("Internal error. Expected to find a state matching the transition");
 
-        let transition_entry_tokens: Vec<TokenStream> = (&target_state.transits).into_iter().map(|transition| {
-            TransitToErrorToTokens::wrap_if_fallible(&self.machine, proc_macro2::TokenStream::from(quote! {
-                #transit_trait::<#transition>::#entry(&mut state)
-            }), &self.state)
-        }).collect();
-
         let state_entry_tokens: TokenStream = TransitToErrorToTokens::wrap_if_fallible(&self.machine, proc_macro2::TokenStream::from(quote! {
                 #state_trait::#entry(&mut state)
             }), &self.state);
@@ -406,7 +376,6 @@ impl ToTokens for TransitionToTokens<'_> {
                 let mut state: #target_state = state.into();
 
                 #state_entry_tokens
-                #(#transition_entry_tokens);*
                 #trace_entry
                 return Ok(#enum_name::#target_state_entry(Some(state)));
             } else
@@ -436,11 +405,11 @@ impl ToTokens for ExitTransitionToTokens<'_> {
     fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
         let transits = self.transits;
         let transit_trait = &self.machine.trait_definitions.transit_trait;
-        let exit = &self.machine.trait_definitions.exit;
+        let action = &self.machine.trait_definitions.action;
 
         let exit_token_streams: Vec<proc_macro2::TokenStream> = transits.into_iter().map(|transits| {
             TransitToErrorToTokens::wrap_if_fallible(&self.machine, proc_macro2::TokenStream::from(quote! {
-                #transit_trait::<#transits>::#exit(&mut state)
+                #transit_trait::<#transits>::#action(&mut state)
             }), &self.state)
         }).collect();
 
