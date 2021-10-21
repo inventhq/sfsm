@@ -84,7 +84,7 @@ pub trait TryState {
 /// call.
 pub trait TryTransition<DestinationState>: Into<DestinationState> + TryState {
 
-    /// Implement any behavior that hast to be executed when entering the state.
+    /// Implement any behavior that hast to be executed when transitioning to the next the state.
     /// Return ``` Ok(()) ``` if no error occurred or ``` Err(Self::Error) ``` if something happened.
     ///
     /// ```rust
@@ -100,9 +100,9 @@ pub trait TryTransition<DestinationState>: Into<DestinationState> + TryState {
     /// #         BarState{}
     /// #     }
     /// # }
-    /// #
+    ///
     /// # impl TryTransition<BarState> for FooState {
-    ///     fn try_entry(&mut self) -> Result<(), Self::Error> {
+    ///     fn try_action(&mut self) -> Result<(), Self::Error> {
     ///         println!("Called right after being transitioned into");
     ///         Ok(())
     ///     }
@@ -111,65 +111,7 @@ pub trait TryTransition<DestinationState>: Into<DestinationState> + TryState {
     /// #    }
     /// # }
     /// ```
-    fn try_entry(&mut self) -> Result<(), Self::Error> { Ok(()) }
-
-    /// Implement any behavior that has to be executed when the state is being executed.
-    /// Return ``` Ok(()) ``` if no error occurred or ``` Err(Self::Error) ``` if something happened.
-    ///
-    /// ```rust
-    /// # use sfsm_base::TransitGuard;
-    /// # use sfsm_base::fallible::{TryState, TryTransition};
-    /// # struct FooState;
-    /// # struct BarState;
-    /// # impl TryState for FooState {
-    /// #      type Error = ();
-    /// # };
-    /// # impl Into<BarState> for FooState {
-    /// #     fn into(self) -> BarState {
-    /// #         BarState{}
-    /// #     }
-    /// # }
-    /// #
-    /// # impl TryTransition<BarState> for FooState {
-    ///     fn try_execute(&mut self) -> Result<(), Self::Error> {
-    ///         println!("Called right after being transitioned into");
-    ///         Ok(())
-    /// #    }
-    /// #    fn guard(&self) -> TransitGuard {
-    /// #            todo!()
-    /// #    }
-    /// # }
-    /// ```
-    fn try_execute(&mut self) -> Result<(), Self::Error> { Ok(()) }
-
-    /// Implement any behavior that hast to be executed when exiting the state.
-    /// Return ``` Ok(()) ``` if no error occurred or ``` Err(Self::Error) ``` if something happened.
-    ///
-    /// ```rust
-    /// # use sfsm_base::TransitGuard;
-    /// # use sfsm_base::fallible::{TryState, TryTransition};
-    /// # struct FooState;
-    /// # struct BarState;
-    /// # impl TryState for FooState {
-    /// #      type Error = ();
-    /// # };
-    /// # impl Into<BarState> for FooState {
-    /// #     fn into(self) -> BarState {
-    /// #         BarState{}
-    /// #     }
-    /// # }
-    ///
-    /// # impl TryTransition<BarState> for FooState {
-    ///     fn try_exit(&mut self) -> Result<(), Self::Error> {
-    ///         println!("Called right after being transitioned into");
-    ///         Ok(())
-    ///     }
-    /// #    fn guard(&self) -> TransitGuard {
-    /// #            todo!()
-    /// #    }
-    /// # }
-    /// ```
-    fn try_exit(&mut self) -> Result<(), Self::Error> { Ok(()) }
+    fn try_action(&mut self) -> Result<(), Self::Error> { Ok(()) }
 
     /// Specifies when the state has to transit. Return ``` TransitGuard::Remain ``` to remain
     /// in the current state and ``` TransitGuard::Transit ``` to transit into the next one.

@@ -32,21 +32,16 @@ impl State for WaitForLaunch {
         println!("WaitForLaunch: Exit");
     }
 }
+
 // Then implement the transitions.
-// Each transition can define an entry, execute and exit function and must define the guard function.
+// Each transition can define an action that gets executed during the transition to the next state.
 // Additionally a Into implementation has to be provided so that each state can be transformed
 // Into the next one.
 impl Into<Launch> for WaitForLaunch {
     fn into(self) -> Launch { Launch {} }
 }
 impl Transition<Launch> for WaitForLaunch {
-    fn entry(&mut self) {
-        println!("WaitForLaunch => Launch: Entry")
-    }
-    fn execute(&mut self) {
-        println!("WaitForLaunch => Launch: Execute");
-    }
-    fn exit(&mut self) {
+    fn action(&mut self) {
         println!("WaitForLaunch => Launch: Exit");
     }
     fn guard(&self) -> TransitGuard {
