@@ -27,6 +27,8 @@ implement the states and transition necessary to fulfill the Transition and Stat
 ## Normal state machine
 A state machine can be defined with the following macro call.
 ```ignore
+ // Only relevant parts included.
+
  add_state_machine!(
      Rocket,                          // Name of the state machine. Accepts a visibility modifier.
      WaitForLaunch,                   // The initial state the state machine will start in
@@ -46,6 +48,8 @@ and the according ``` Transition ``` traits.
 With the ``` add_fallible_state_machine ``` macro, a state machine with intrinsic error handling can be generated. As 
 soon as the specified error occurs, the state machine immediately jumps into the error state where the error can be handled. 
 ```ignore
+ // Only relevant parts included.
+
  add_fallible_state_machine!(
     Rocket,                                      // Name of the state machine. Accepts a visibility modifier.
     WaitForLaunch,                               // The initial state the state machine will start in
@@ -63,9 +67,67 @@ of the states and transitions. In the fallible state machine, the traits that ha
 ``` TryState ``` and ``` TryTransition ``` traits. Additionally, the error state must implement the
 ``` TryErrorState ``` trait to define how the error is handled.
 
+## Hierarchical state machines
+In complex environments it is common to encapsulate smaller, inner state machines into larger outer ones to break down
+the complexity into more manageable parts. 
+The following code shows how a nested state machine can be built.
+```ignore
+ // Only relevant parts included.
+ 
+ // Defines the Forward Observer top-level state machine.
+ add_state_machine!(
+     ForwardObserver,
+     Offline,
+     [Offline, Online],
+     [
+         Offline => Online,
+         Online => Offline,
+     ]
+ );
+ 
+ // Defines the Online inner state machine.
+ add_state_machine!(
+     OnlineMachine,
+     Standby,
+     [Standby, Requesting, Observing, Reporting],
+     [
+         Standby => Requesting,
+         Requesting => Observing,
+         Observing => Reporting,
+         Reporting => Standby,
+     ]
+ );
+ 
+ struct Online {
+     state_machine: OnlineMachine,
+ }
+ 
+ impl State for Online {
+     /// Executes the sub-state machine on each step.
+     fn execute(&mut self) {
+         self.state_machine.step().unwrap();
+     }
+ }
+ 
+ impl From<Offline> for Online {
+     /// Constructs, and starts, the [`Online`] state machine on a transition from Offline
+     fn from(_: Offline) -> Self {
+         let mut online = Self {
+             state_machine: OnlineMachine::new(),
+         };
+         online.state_machine.start(Standby {}).unwrap();
+ 
+         online
+     }
+ }
+```
+This encapsulated the smaller ``` OnlineMachine ``` in the ``` Online ``` state.
+
 ## Messaging system
 Additionally, messages to be pushed into or polled from the states, can be defined.
 ```ignore
+ // Only relevant parts included.
+
  add_messages!(
      Rocket,
      [
