@@ -1,4 +1,6 @@
 # Static state machine generator for no_std environments
+[![crates.io](https://img.shields.io/crates/v/sfsm.svg)](https://crates.io/crates/sfsm)
+[![crates.io](https://img.shields.io/crates/d/sfsm.svg)](https://crates.io/crates/sfsm)
 
 State machines are an essential part of many software architectures and are particularly common on low
 level systems such as embedded systems. They allow a complicated system to be broken down into many
