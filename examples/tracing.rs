@@ -9,11 +9,14 @@ fn trace(log: &str) {
     println!("{}", log);
 }
 
+#[derive(StateEmpty)]
 struct WaitForLaunch {
     malfunction: bool,
     do_launch: bool,
 }
+#[derive(StateEmpty)]
 struct Launch {}
+#[derive(StateEmpty)]
 struct Abort {}
 
 add_state_machine!(
@@ -41,10 +44,6 @@ add_messages!(Rocket,
     ]
 );
 
-impl State for WaitForLaunch {
-    fn entry(&mut self) {
-    }
-}
 impl Into<Abort> for WaitForLaunch {
     fn into(self) -> Abort {Abort {}}
 }
@@ -73,7 +72,6 @@ impl Transition<Launch> for WaitForLaunch {
     }
 }
 
-impl State for Abort {}
 impl Into<WaitForLaunch> for Abort {
     fn into(self) -> WaitForLaunch {
         WaitForLaunch {
@@ -88,10 +86,6 @@ impl Transition<WaitForLaunch> for Abort {
     }
 }
 
-impl State for Launch {
-    fn entry(&mut self) {
-    }
-}
 impl ReturnMessage<Status> for Launch {
     fn return_message(&mut self) -> Option<Status> {
         Some(Status { })

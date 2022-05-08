@@ -3,7 +3,7 @@
 use proc_macro::TokenStream;
 use proc_macro2::Ident;
 use quote::quote;
-use syn::ItemFn;
+use syn::{DeriveInput, ItemFn};
 use crate::generators::{StateMachineToTokens, MessagesToTokens};
 mod generators;
 mod parsers;
@@ -316,6 +316,15 @@ pub fn match_state_entry(input: TokenStream) -> TokenStream {
     })
 }
 
+/// Creates a wrapper around a log function to forward the logs to.
+/// With the help of ``` sfsm_trace ```, a logger function to which all logs from the state machine
+/// are forwarded to can be configured
+/// ```ignore
+/// #[sfsm_trace]
+/// fn trace(log: &str) {
+///     println!("{}", log);
+/// }
+/// ```
 #[proc_macro_attribute]
 pub fn sfsm_trace(_attr: TokenStream, item: TokenStream) -> TokenStream {
     let trace_function: ItemFn = syn::parse_macro_input!(item as ItemFn);
@@ -327,3 +336,23 @@ pub fn sfsm_trace(_attr: TokenStream, item: TokenStream) -> TokenStream {
         }
     })
 }
+
+/// Derives an empty implementation of the state.
+/// ```ignore
+/// #[derive(StateEmpty)]
+/// struct Launch {}
+/// ```
+/// Derives:
+/// ```ignore
+/// impl State for Launch {}
+/// ```
+#[proc_macro_derive(StateEmpty)]
+pub fn derive_state_empty(input: TokenStream) -> TokenStream {
+    let input = syn::parse_macro_input!(input);
+    let DeriveInput { ident, generics, .. } = input;
+    TokenStream::from(quote!{
+        impl State for #ident #generics {}
+    })
+}
+
+
