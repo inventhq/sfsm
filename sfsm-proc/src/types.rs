@@ -1,7 +1,7 @@
 use convert_case::{Case, Casing};
 use proc_macro2::{Ident, Span, TokenStream};
 use quote::{ToTokens, quote};
-use syn::{AngleBracketedGenericArguments, Visibility, Attribute};
+use syn::{AngleBracketedGenericArguments, Visibility, Attribute, TypePath};
 
 pub enum Mode {
     NonFallible,
@@ -133,3 +133,15 @@ pub struct Messages {
     pub enum_name: Ident,
     pub messages: Vec<StateMessage>,
 }
+
+pub struct DeriveTransitionBase {
+    pub src: State,
+    pub dst: State
+}
+
+pub struct DeriveTransition {
+    pub transition: DeriveTransitionBase,
+    pub guard: TypePath,
+}
+
+

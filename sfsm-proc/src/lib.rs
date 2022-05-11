@@ -1,7 +1,6 @@
 #![doc = include_str!("../README.md")]
 
 use proc_macro::TokenStream;
-use proc_macro2::Ident;
 use quote::quote;
 use syn::{DeriveInput, ItemFn};
 use crate::generators::{StateMachineToTokens, MessagesToTokens};
@@ -9,7 +8,8 @@ mod generators;
 mod parsers;
 mod types;
 mod trace;
-use crate::types::{MatchStateEntry, Machine, TryMachine, Messages};
+use crate::types::{MatchStateEntry, Machine, TryMachine, Messages, State, DeriveTransition, DeriveTransitionBase};
+use proc_macro2::{Span, Ident};
 
 /// Generates a state machine from a given state machine definition.
 ///
@@ -328,7 +328,7 @@ pub fn match_state_entry(input: TokenStream) -> TokenStream {
 #[proc_macro_attribute]
 pub fn sfsm_trace(_attr: TokenStream, item: TokenStream) -> TokenStream {
     let trace_function: ItemFn = syn::parse_macro_input!(item as ItemFn);
-    let trace_function_ident: &Ident = &trace_function.sig.ident;
+    let trace_function_ident: &proc_macro2::Ident = &trace_function.sig.ident;
     TokenStream::from(quote!{
         #trace_function
         fn __sfsm_trace(str: &str) {
@@ -338,21 +338,47 @@ pub fn sfsm_trace(_attr: TokenStream, item: TokenStream) -> TokenStream {
 }
 
 /// Derives an empty implementation of the state.
-/// ```ignore
-/// #[derive(StateEmpty)]
-/// struct Launch {}
-/// ```
-/// Derives:
-/// ```ignore
-/// impl State for Launch {}
-/// ```
-#[proc_macro_derive(StateEmpty)]
+/// TODO: Add doc
+#[proc_macro]
 pub fn derive_state_empty(input: TokenStream) -> TokenStream {
-    let input = syn::parse_macro_input!(input);
-    let DeriveInput { ident, generics, .. } = input;
+    let state: State = syn::parse_macro_input!(input as State);
+    let name = state.name;
+    let generics = state.generics;
     TokenStream::from(quote!{
-        impl State for #ident #generics {}
+        impl State for #name #generics {}
     })
 }
 
+/// Derives an empty implementation of the state.
+/// TODO: Add doc
+#[proc_macro]
+pub fn derive_transition_empty(input: TokenStream) -> TokenStream {
+    let transition: DeriveTransition = syn::parse_macro_input!(input as DeriveTransition);
+    let src = transition.transition.src;
+    let dst = transition.transition.dst;
+    let guard = transition.guard;
+    TokenStream::from(quote!{
+        impl Transition<#dst> for #src {
+            fn guard(&self) -> TransitGuard {
+                #guard
+            }
+        }
+    })
+}
+
+/// Derives an empty implementation of the state.
+/// TODO: Add doc
+#[proc_macro]
+pub fn derive_transition_into(input: TokenStream) -> TokenStream {
+    let transition: DeriveTransitionBase = syn::parse_macro_input!(input as DeriveTransitionBase);
+    let src = transition.src;
+    let dst = transition.dst;
+    TokenStream::from(quote!{
+        impl Into<#dst> for #src {
+            fn into(self) -> #dst {
+                #dst {}
+            }
+        }
+    })
+}
 

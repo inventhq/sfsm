@@ -5,8 +5,15 @@ use sfsm::*;
 pub struct Online {
     state_machine: OnlineMachine,
 }
+
+
 pub struct Offline {}
+
 pub struct Standby {}
+derive_transition_empty!(Standby, Requesting, TransitGuard::Transit);
+derive_transition_empty!(Standby, Observing, TransitGuard::Transit);
+
+
 pub struct Requesting {}
 pub struct Observing {}
 pub struct Reporting {}
@@ -144,18 +151,12 @@ impl Into<Offline> for Online {
 }
 impl Transition<Online> for Offline {
     fn guard(&self) -> TransitGuard {
-        true.into()
+        TransitGuard::Transit
     }
 }
 impl Into<Requesting> for Standby {
     fn into(self) -> Requesting {
         Requesting {}
-    }
-}
-
-impl Transition<Requesting> for Standby {
-    fn guard(&self) -> TransitGuard {
-        true.into()
     }
 }
 

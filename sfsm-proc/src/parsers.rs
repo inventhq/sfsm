@@ -1,11 +1,11 @@
 use proc_macro2::{Ident, Span};
 use proc_macro::{TokenStream};
-use syn::{Result, AngleBracketedGenericArguments, Visibility, Attribute, Error};
+use syn::{Result, AngleBracketedGenericArguments, Visibility, Attribute, Error, TypePath};
 use syn::parse::{Parse, ParseStream, Parser};
 use syn::punctuated::{Punctuated};
 use syn::Token;
 use quote::{quote};
-use crate::types::{State, Transition, Machine, StateEntry, MatchStateEntry, StateMessage, Messages, Message, MessageDir, ErrorType, TryMachine, Mode, TraitDefinitions};
+use crate::types::{State, Transition, Machine, StateEntry, MatchStateEntry, StateMessage, Messages, Message, MessageDir, ErrorType, TryMachine, Mode, TraitDefinitions, DeriveTransitionBase, DeriveTransition};
 
 /// Parses the name of a state and optionally a type.
 /// For example Foo or Bar<T>
@@ -296,6 +296,32 @@ impl Parse for TryMachine {
 
         Ok(Self {
             state_machine
+        })
+    }
+}
+
+impl Parse for DeriveTransitionBase {
+    fn parse(input: ParseStream) -> Result<Self> {
+        let src: State = input.parse()?;
+        input.parse::<syn::Token![,]>()?;
+        let dst: State = input.parse()?;
+
+        Ok(Self {
+            src,
+            dst
+        })
+    }
+}
+
+impl<'a> Parse for DeriveTransition {
+    fn parse(input: ParseStream) -> Result<Self> {
+        let transition: DeriveTransitionBase = input.parse()?;
+        input.parse::<syn::Token![,]>()?;
+        let guard: TypePath = input.parse()?;
+
+        Ok(Self {
+            transition,
+            guard
         })
     }
 }
