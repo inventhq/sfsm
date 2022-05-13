@@ -55,18 +55,10 @@ impl TryState for WaitForLaunch {
 }
 
 // Implement the various transitions
-impl Into<Launch> for WaitForLaunch {
-    fn into(self) -> Launch {
-        Launch {}
-    }
-}
+derive_transition_into!(WaitForLaunch, Launch);
 
 // Start the launch
-impl TryTransition<Launch> for WaitForLaunch {
-    fn guard(&self) -> TransitGuard {
-        TransitGuard::Transit
-    }
-}
+derive_try_transition!(WaitForLaunch, Launch, TransitGuard::Transit);
 
 // Every state must implement a Into trait for the error state. Otherwise valuable data could get
 // lost.
@@ -82,11 +74,8 @@ impl Into<HandleMalfunction> for WaitForLaunch {
 }
 
 // Restart the launch as soon as the malfunction is handled
-impl TryTransition<WaitForLaunch> for HandleMalfunction {
-    fn guard(&self) -> TransitGuard {
-        TransitGuard::Transit
-    }
-}
+derive_try_transition!(HandleMalfunction, WaitForLaunch, TransitGuard::Transit);
+
 impl Into<WaitForLaunch> for HandleMalfunction {
     fn into(self) -> WaitForLaunch {
         WaitForLaunch {
@@ -137,6 +126,15 @@ add_fallible_state_machine!(
     RocketMalfunction,                      // The error type
     HandleMalfunction                       // The error state
 );
+
+/// Register a logger function
+/// Enable the trace features for the tracing to work
+/// The logger function receives logs from the state machine and forwards them
+/// to what ever logging mechanism desired.
+#[sfsm_trace]
+fn trace(log: &str) {
+    println!("{}", log);
+}
 
 fn run_error_example() -> Result<(), ExtendedSfsmError<RocketMalfunction>> {
 

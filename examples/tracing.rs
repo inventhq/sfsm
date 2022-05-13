@@ -1,6 +1,8 @@
 use sfsm::*;
 use sfsm::message::{MessageError, ReturnMessage, ReceiveMessage};
 
+/// This example requires the trace* features to be enabled to run
+
 /// Register a logger function
 /// The logger function receives logs from the state machine and forwards them 
 /// to what ever logging mechanism desired.
@@ -44,9 +46,7 @@ add_messages!(Rocket,
     ]
 );
 
-impl Into<Abort> for WaitForLaunch {
-    fn into(self) -> Abort {Abort {}}
-}
+derive_transition_into!(WaitForLaunch, Abort);
 impl Transition<Abort> for WaitForLaunch {
     fn guard(&self) -> TransitGuard {
         return self.malfunction.into();
@@ -63,9 +63,7 @@ impl ReceiveMessage<Malfunction> for WaitForLaunch {
     }
 }
 
-impl Into<Launch> for WaitForLaunch {
-    fn into(self) -> Launch {Launch {}}
-}
+derive_transition_into!(WaitForLaunch, Launch);
 impl Transition<Launch> for WaitForLaunch {
     fn guard(&self) -> TransitGuard {
         return self.do_launch.into();
@@ -80,11 +78,8 @@ impl Into<WaitForLaunch> for Abort {
         }
     }
 }
-impl Transition<WaitForLaunch> for Abort {
-    fn guard(&self) -> TransitGuard {
-        return TransitGuard::Transit;
-    }
-}
+
+derive_transition!(Abort, WaitForLaunch, TransitGuard::Transit);
 
 impl ReturnMessage<Status> for Launch {
     fn return_message(&mut self) -> Option<Status> {

@@ -30,6 +30,12 @@ add_state_machine!(
     ]
 );
 
+derive_state!(Offline);
+derive_state!(Standby);
+derive_state!(Requesting);
+derive_state!(Observing);
+derive_state!(Reporting);
+
 impl State for Online {
     /// Executes the sub-state machine on each step.
     fn execute(&mut self) {
@@ -47,34 +53,13 @@ impl From<Offline> for Online {
     }
 }
 
-impl State for Offline {
-    fn entry(&mut self) {
-        println!("Offline: Entry");
-    }
-}
-
-impl State for Standby {
-    fn entry(&mut self) {
-        println!("Standby: Entry");
-    }
-}
-
-impl State for Requesting  {
-    fn entry(&mut self) {
-        println!("Requesting: Entry");
-    }
-}
-
-impl State for Observing  {
-    fn entry(&mut self) {
-        println!("Observing: Entry");
-    }
-}
-
-impl State for Reporting  {
-    fn entry(&mut self) {
-        println!("Reporting: Entry");
-    }
+/// Register a logger function
+/// Enable the trace features for the tracing to work
+/// The logger function receives logs from the state machine and forwards them
+/// to what ever logging mechanism desired.
+#[sfsm_trace]
+fn trace(log: &str) {
+    println!("{}", log);
 }
 
 fn run_hierarchical_simple() -> Result<(), SfsmError> {
