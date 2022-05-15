@@ -62,6 +62,15 @@ impl State for Launch {
     }
 }
 
+/// Register a logger function
+/// Enable the trace features for the tracing to work
+/// The logger function receives logs from the state machine and forwards them
+/// to what ever logging mechanism desired.
+#[sfsm_trace]
+fn trace(log: &str) {
+    println!("{}", log);
+}
+
 fn run_basic_example() -> Result<(), SfsmError> {
 
     // Now the state machine can be instantiated. Note: This corresponds to the name given in the

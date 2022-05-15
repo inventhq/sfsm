@@ -36,6 +36,68 @@ derive_state!(Requesting);
 derive_state!(Observing);
 derive_state!(Reporting);
 
+impl Into<Offline> for Online {
+    fn into(self) -> Offline {
+        Offline {}
+    }
+}
+impl Transition<Online> for Offline {
+    fn guard(&self) -> TransitGuard {
+        true.into()
+    }
+}
+impl Transition<Offline> for Online {
+    fn guard(&self) -> TransitGuard {
+        false.into()
+    }
+}
+impl Into<Requesting> for Standby {
+    fn into(self) -> Requesting {
+        Requesting {}
+    }
+}
+
+impl Transition<Requesting> for Standby {
+    fn guard(&self) -> TransitGuard {
+        true.into()
+    }
+}
+
+impl Into<Observing> for Requesting {
+    fn into(self) -> Observing {
+        Observing {}
+    }
+}
+impl Transition<Observing> for Requesting {
+    fn guard(&self) -> TransitGuard {
+        true.into()
+    }
+}
+
+impl Into<Reporting> for Observing {
+    fn into(self) -> Reporting {
+        Reporting {}
+    }
+}
+
+impl Transition<Reporting> for Observing {
+    fn guard(&self) -> TransitGuard {
+        true.into()
+    }
+}
+
+impl Into<Standby> for Reporting {
+    fn into(self) -> Standby {
+        Standby {}
+    }
+}
+
+impl Transition<Standby> for Reporting {
+    fn guard(&self) -> TransitGuard {
+        true.into()
+    }
+}
+
 impl State for Online {
     /// Executes the sub-state machine on each step.
     fn execute(&mut self) {
@@ -106,65 +168,3 @@ mod tests {
     }
 }
 
-
-impl Into<Offline> for Online {
-    fn into(self) -> Offline {
-        Offline {}
-    }
-}
-impl Transition<Online> for Offline {
-    fn guard(&self) -> TransitGuard {
-        true.into()
-    }
-}
-impl Transition<Offline> for Online {
-    fn guard(&self) -> TransitGuard {
-        false.into()
-    }
-}
-impl Into<Requesting> for Standby {
-    fn into(self) -> Requesting {
-        Requesting {}
-    }
-}
-
-impl Transition<Requesting> for Standby {
-    fn guard(&self) -> TransitGuard {
-        true.into()
-    }
-}
-
-impl Into<Observing> for Requesting {
-    fn into(self) -> Observing {
-        Observing {}
-    }
-}
-impl Transition<Observing> for Requesting {
-    fn guard(&self) -> TransitGuard {
-        true.into()
-    }
-}
-
-impl Into<Reporting> for Observing {
-    fn into(self) -> Reporting {
-        Reporting {}
-    }
-}
-
-impl Transition<Reporting> for Observing {
-    fn guard(&self) -> TransitGuard {
-        true.into()
-    }
-}
-
-impl Into<Standby> for Reporting {
-    fn into(self) -> Standby {
-        Standby {}
-    }
-}
-
-impl Transition<Standby> for Reporting {
-    fn guard(&self) -> TransitGuard {
-        true.into()
-    }
-}

@@ -11,14 +11,11 @@ fn trace(log: &str) {
     println!("{}", log);
 }
 
-#[derive(StateEmpty)]
 struct WaitForLaunch {
     malfunction: bool,
     do_launch: bool,
 }
-#[derive(StateEmpty)]
 struct Launch {}
-#[derive(StateEmpty)]
 struct Abort {}
 
 add_state_machine!(
@@ -45,6 +42,11 @@ add_messages!(Rocket,
         Status <- Launch,
     ]
 );
+
+
+derive_state!(WaitForLaunch);
+derive_state!(Launch);
+derive_state!(Abort);
 
 derive_transition_into!(WaitForLaunch, Abort);
 impl Transition<Abort> for WaitForLaunch {

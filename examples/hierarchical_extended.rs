@@ -33,13 +33,21 @@ add_state_machine!(
     ]
 );
 
-derive_transition_empty!(Standby, Requesting, TransitGuard::Transit);
-derive_transition_empty!(Standby, Observing, TransitGuard::Transit);
 derive_state!(Offline);
 derive_state!(Standby);
 derive_state!(Requesting);
 derive_state!(Observing);
 derive_state!(Reporting);
+derive_transition!(Standby, Requesting, TransitGuard::Transit);
+derive_transition!(Requesting, Observing, TransitGuard::Transit);
+derive_transition!(Reporting, Standby, TransitGuard::Transit);
+derive_transition!(Observing, Reporting, TransitGuard::Transit);
+derive_transition!(Offline, Online, TransitGuard::Transit);
+derive_transition_into!(Online, Offline);
+derive_transition_into!(Standby, Requesting);
+derive_transition_into!(Requesting, Observing);
+derive_transition_into!(Observing, Reporting);
+derive_transition_into!(Reporting, Standby);
 
 impl State for Online {
     /// Executes the sub-state machine on each step.
@@ -119,53 +127,3 @@ mod tests {
     }
 }
 
-impl Into<Offline> for Online {
-    fn into(self) -> Offline {
-        Offline {}
-    }
-}
-impl Transition<Online> for Offline {
-    fn guard(&self) -> TransitGuard {
-        TransitGuard::Transit
-    }
-}
-impl Into<Requesting> for Standby {
-    fn into(self) -> Requesting {
-        Requesting {}
-    }
-}
-
-impl Into<Observing> for Requesting {
-    fn into(self) -> Observing {
-        Observing {}
-    }
-}
-impl Transition<Observing> for Requesting {
-    fn guard(&self) -> TransitGuard {
-        true.into()
-    }
-}
-
-impl Into<Reporting> for Observing {
-    fn into(self) -> Reporting {
-        Reporting {}
-    }
-}
-
-impl Transition<Reporting> for Observing {
-    fn guard(&self) -> TransitGuard {
-        true.into()
-    }
-}
-
-impl Into<Standby> for Reporting {
-    fn into(self) -> Standby {
-        Standby {}
-    }
-}
-
-impl Transition<Standby> for Reporting {
-    fn guard(&self) -> TransitGuard {
-        true.into()
-    }
-}
