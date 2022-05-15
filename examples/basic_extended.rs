@@ -23,29 +23,28 @@ add_state_machine!(
     ]
 );
 
-impl State for Action<WaitForLaunch> {
+// Use the derive macros to implement empty default implementations.
+// Check out the basic examples to know how to implement them manually
+derive_state!(Action<WaitForLaunch>);
+derive_state!(Action<Ascent>);
+derive_state!(Action<Descent>);
+derive_transition!(Action<WaitForLaunch>, Action<Ascent>, TransitGuard::Transit);
+derive_transition!(Action<Ascent>, Action<Descent>, TransitGuard::Transit);
+
+/// Register a logger function
+/// Enable the trace features for the tracing to work
+/// The logger function receives logs from the state machine and forwards them
+/// to what ever logging mechanism desired.
+#[sfsm_trace]
+fn trace(log: &str) {
+    println!("{}", log);
 }
+
 impl Into<Action<Ascent>> for Action<WaitForLaunch> {
     fn into(self) -> Action<Ascent> { Action { phantom: PhantomData }}
 }
-impl Transition<Action<Ascent>> for Action<WaitForLaunch> {
-    fn guard(&self) -> TransitGuard {
-        return TransitGuard::Transit;
-    }
-}
-
-impl State for Action<Ascent> {
-}
 impl Into<Action<Descent>> for Action<Ascent> {
     fn into(self) -> Action<Descent> { Action { phantom: PhantomData }}
-}
-impl Transition<Action<Descent>> for Action<Ascent> {
-    fn guard(&self) -> TransitGuard {
-        return TransitGuard::Transit;
-    }
-}
-
-impl State for Action<Descent> {
 }
 
 fn run_basic_extended_example() -> Result<(), SfsmError> {

@@ -1,7 +1,6 @@
 #![doc = include_str!("../README.md")]
 
 use proc_macro::TokenStream;
-use proc_macro2::Ident;
 use quote::quote;
 use syn::ItemFn;
 use crate::generators::{StateMachineToTokens, MessagesToTokens};
@@ -9,7 +8,7 @@ mod generators;
 mod parsers;
 mod types;
 mod trace;
-use crate::types::{MatchStateEntry, Machine, TryMachine, Messages};
+use crate::types::{MatchStateEntry, Machine, TryMachine, Messages, State, DeriveTransition, DeriveTransitionBase};
 
 /// Generates a state machine from a given state machine definition.
 ///
@@ -316,14 +315,170 @@ pub fn match_state_entry(input: TokenStream) -> TokenStream {
     })
 }
 
+/// Creates a wrapper around a log function to forward the logs to.
+/// With the help of ``` sfsm_trace ```, a logger function to which all logs from the state machine
+/// are forwarded to can be configured
+/// ```ignore
+/// #[sfsm_trace]
+/// fn trace(log: &str) {
+///     println!("{}", log);
+/// }
+/// ```
 #[proc_macro_attribute]
 pub fn sfsm_trace(_attr: TokenStream, item: TokenStream) -> TokenStream {
     let trace_function: ItemFn = syn::parse_macro_input!(item as ItemFn);
-    let trace_function_ident: &Ident = &trace_function.sig.ident;
+    let trace_function_ident: &proc_macro2::Ident = &trace_function.sig.ident;
     TokenStream::from(quote!{
         #trace_function
         fn __sfsm_trace(str: &str) {
             #trace_function_ident(str);
+        }
+    })
+}
+
+/// Derives an empty transition of a transition from one state into another and allows to
+/// customise if it should always transit or never.
+/// ```ignore
+/// derive_transition!(Foo, Bar, TransitGuard::Transit);
+/// // Generates
+/// impl Transition<Bar> for Bar {
+///     fn guard(&self) -> TransitGuard {
+///         TransitGuard::Transit
+///     }
+/// }
+/// ```
+/// This macro is implemented as a proc macro instead of a derive macro because it needs additional
+/// info that is difficult to get into a derive macro in a semantic way.
+#[proc_macro]
+pub fn derive_transition(input: TokenStream) -> TokenStream {
+    let transition: DeriveTransition = syn::parse_macro_input!(input as DeriveTransition);
+    let src = transition.transition.src;
+    let dst = transition.transition.dst;
+    let guard = transition.guard;
+    TokenStream::from(quote!{
+        impl Transition<#dst> for #src {
+            fn guard(&self) -> TransitGuard {
+                #guard
+            }
+        }
+    })
+}
+
+/// Derives an empty implementation of the state.
+/// ```ignore
+/// derive_state!(Foo);
+/// // Generates
+/// impl State for Foo {};
+/// ```
+/// It's somewhat redundant, but it is added for consistency to match the other derive_* functions
+/// and to help keep state machine short and clean.
+#[proc_macro]
+pub fn derive_state(input: TokenStream) -> TokenStream {
+    let state: State = syn::parse_macro_input!(input as State);
+    let name = state.name;
+    let generics = state.generics;
+    TokenStream::from(quote!{
+        impl State for #name #generics {}
+    })
+}
+
+/// Derives an empty transition of a transition from one state into another and allows to
+/// customise if it should always transit or never.
+/// ```ignore
+/// derive_try_transition!(Foo, Bar, TransitGuard::Transit);
+/// // Generates
+/// impl TryTransition<Bar> for Bar {
+///     fn guard(&self) -> TransitGuard {
+///         TransitGuard::Transit
+///     }
+/// }
+/// ```
+/// This macro is implemented as a proc macro instead of a derive macro because it needs additional
+/// info that is difficult to get into a derive macro in a semantic way.
+#[proc_macro]
+pub fn derive_try_transition(input: TokenStream) -> TokenStream {
+    let transition: DeriveTransition = syn::parse_macro_input!(input as DeriveTransition);
+    let src = transition.transition.src;
+    let dst = transition.transition.dst;
+    let guard = transition.guard;
+    TokenStream::from(quote!{
+        impl TryTransition<#dst> for #src {
+            fn guard(&self) -> TransitGuard {
+                #guard
+            }
+        }
+    })
+}
+
+/// Derives an empty implementation of the TryState.
+/// ```ignore
+/// derive_try_state!(Foo);
+/// // Generates
+/// impl TryState for Foo {};
+/// ```
+/// It's somewhat redundant, but it is added for consistency to match the other derive_* functions
+/// and to help keep state machine short and clean.
+#[proc_macro]
+pub fn derive_try_state(input: TokenStream) -> TokenStream {
+    let state: State = syn::parse_macro_input!(input as State);
+    let name = state.name;
+    let generics = state.generics;
+    TokenStream::from(quote!{
+        impl TryState for #name #generics {}
+    })
+}
+
+
+/// Derives an a implementation of the into trait for the transition if the target state does
+/// not contains any members
+/// ```ignore
+/// derive_transition_into!(Foo, Bar);
+/// // Generates
+/// impl Into<Bar> for Foo {
+///     fn into(self) -> Bar {
+///         Bar {}
+///     }
+/// }
+/// ```
+/// This macro is implemented as a proc macro instead of a derive macro because it needs additional
+/// info that is difficult to get into a derive macro in a semantic way.
+#[proc_macro]
+pub fn derive_transition_into(input: TokenStream) -> TokenStream {
+    let transition: DeriveTransitionBase = syn::parse_macro_input!(input as DeriveTransitionBase);
+    let src = transition.src;
+    let dst = transition.dst;
+    TokenStream::from(quote!{
+        impl Into<#dst> for #src {
+            fn into(self) -> #dst {
+                #dst {}
+            }
+        }
+    })
+}
+
+/// Derives an empty a implementation fo the into trait for the transition if the target state
+/// implements the ``` Default ``` trait.
+/// ```ignore
+/// derive_transition_into_default!(Foo, Bar);
+/// // Generates
+/// impl Into<Bar> for Foo {
+///     fn into(self) -> Bar {
+///         Bar::default()
+///     }
+/// }
+/// ```
+/// This macro is implemented as a proc macro instead of a derive macro because it needs additional
+/// info that is difficult to get into a derive macro in a semantic way.
+#[proc_macro]
+pub fn derive_transition_into_default(input: TokenStream) -> TokenStream {
+    let transition: DeriveTransitionBase = syn::parse_macro_input!(input as DeriveTransitionBase);
+    let src = transition.src;
+    let dst = transition.dst;
+    TokenStream::from(quote!{
+        impl Into<#dst> for #src {
+            fn into(self) -> #dst {
+                #dst::default()
+            }
         }
     })
 }

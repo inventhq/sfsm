@@ -7,7 +7,7 @@ license = "MIT"
 readme = "README.md"
 keywords = ["static", "state-machine", "no_std", "embedded"]
 repository = "https://gitlab.com/sfsm/sfsm"
-description = "Generate static state machines"
+description = "Static state machine generator for no_std and embedded environments"
 
 [workspace]
 members = ["sfsm-base", "sfsm-proc"]

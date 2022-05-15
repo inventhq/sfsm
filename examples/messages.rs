@@ -40,9 +40,8 @@ impl State for WaitForLaunch {
         println!("Begin countdown");
     }
 }
-impl Into<Abort> for WaitForLaunch {
-    fn into(self) -> Abort {Abort {}}
-}
+
+derive_transition_into!(WaitForLaunch, Abort);
 impl Transition<Abort> for WaitForLaunch {
     fn guard(&self) -> TransitGuard {
         return self.malfunction.into();
@@ -60,11 +59,8 @@ impl ReceiveMessage<Malfunction> for WaitForLaunch {
     }
 }
 
-
 // Then handle the transition to Launch
-impl Into<Launch> for WaitForLaunch {
-    fn into(self) -> Launch {Launch {}}
-}
+derive_transition_into!(WaitForLaunch, Launch);
 impl Transition<Launch> for WaitForLaunch {
     fn guard(&self) -> TransitGuard {
         return self.do_launch.into();
@@ -87,12 +83,7 @@ impl Into<WaitForLaunch> for Abort {
         }
     }
 }
-impl Transition<WaitForLaunch> for Abort {
-    fn guard(&self) -> TransitGuard {
-        return TransitGuard::Transit;
-    }
-}
-
+derive_transition!(Abort, WaitForLaunch, TransitGuard::Transit);
 // And finally the launch state that has no transitions
 impl State for Launch {
     fn entry(&mut self) {
@@ -103,6 +94,15 @@ impl ReturnMessage<Status> for Launch {
     fn return_message(&mut self) -> Option<Status> {
         Some(Status {height: 1000.0f32, velocity: 300.0f32})
     }
+}
+
+/// Register a logger function
+/// Enable the trace features for the tracing to work
+/// The logger function receives logs from the state machine and forwards them
+/// to what ever logging mechanism desired.
+#[sfsm_trace]
+fn trace(log: &str) {
+    println!("{}", log);
 }
 
 fn run_launch_sequence_with_message() -> Result<(), SfsmError> {

@@ -1,4 +1,4 @@
-# Static state machine generator for no_std environments
+# Static state machine generator for no_std and embedded environments
 [![crates.io](https://img.shields.io/crates/v/sfsm.svg)](https://crates.io/crates/sfsm)
 [![crates.io](https://img.shields.io/crates/d/sfsm.svg)](https://crates.io/crates/sfsm)
 [![crates.io](https://img.shields.io/docsrs/sfsm)](https://docs.rs/sfsm/latest/sfsm/)
