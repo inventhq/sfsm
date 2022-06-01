@@ -23,7 +23,7 @@ pub mod __protected {
     {
         /// This will call the receive_message function of ``` FooState ``` if it implemented the ReceiveMessage
         /// trait for message 'FooMessage' and it has been declared to do so with the add_message! macro.
-        ///```ignore
+        ///```rust,ignore
         /// use sfsm_base::PushMessage;
         /// let some_message = 2u32;
         /// PushMessage::<FooState, FooMessage>::push_message(&mut sfsm, some_message);
@@ -38,7 +38,7 @@ pub mod __protected {
     {
         /// This will call the return_message function of ``` FooState ``` if it implemented the ReturnMessage
         /// trait for message 'FooMessage' and it has been declared to do so with the add_message! macro.
-        ///```ignore
+        ///```rust,ignore
         /// use sfsm_base::PollMessage;
         /// let some_message = PollMessage::<FooState, FooMessage>::poll_message(&mut sfsm);
         ///```

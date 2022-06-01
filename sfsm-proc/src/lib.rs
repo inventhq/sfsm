@@ -13,7 +13,7 @@ use crate::types::{MatchStateEntry, Machine, TryMachine, Messages, State, Derive
 /// Generates a state machine from a given state machine definition.
 ///
 /// The state machine definition is expected too hold to the following pattern:
-/// ```ignore
+/// ```rust,ignore
 /// add_state_machine!(
 ///     StateMachineName,
 ///     InitialState,
@@ -91,7 +91,7 @@ pub fn add_state_machine(input: TokenStream) -> TokenStream {
 /// Generates a fallible state machine from a given state machine definition with error handling.
 ///
 /// The state machine definition is expected too hold to the following pattern:
-/// ```ignore
+/// ```rust,ignore
 /// add_fallible_state_machine!(
 ///     StateMachineName,
 ///     InitialState,
@@ -199,7 +199,7 @@ pub fn add_fallible_state_machine(input: TokenStream) -> TokenStream {
 /// Generates code to push messages into states or poll messages from states.
 ///
 /// The messaging definition is expected too hold to the following pattern:
-/// ```ignore
+/// ```rust,ignore
 /// add_messages!(
 ///     StateMachineName,
 ///     [
@@ -291,7 +291,7 @@ pub fn add_messages(input: TokenStream) -> TokenStream {
 /// Generate the enum entry of a state. Expects the name of the sfsm and the name (and type args)
 /// of the state as well as the desired name of the variable to work with as arguments.
 /// Can be used to generate match branches for example.
-/// ```ignore
+/// ```rust,ignore
 /// match exit {
 ///     match_state_entry!(NameOfTheSfsm, DesiredState<AndType>, var_name) => {
 ///         // Access "var_name" here.
@@ -318,7 +318,7 @@ pub fn match_state_entry(input: TokenStream) -> TokenStream {
 /// Creates a wrapper around a log function to forward the logs to.
 /// With the help of ``` sfsm_trace ```, a logger function to which all logs from the state machine
 /// are forwarded to can be configured
-/// ```ignore
+/// ```rust,ignore
 /// #[sfsm_trace]
 /// fn trace(log: &str) {
 ///     println!("{}", log);
@@ -338,7 +338,7 @@ pub fn sfsm_trace(_attr: TokenStream, item: TokenStream) -> TokenStream {
 
 /// Derives an empty transition of a transition from one state into another and allows to
 /// customise if it should always transit or never.
-/// ```ignore
+/// ```rust,ignore
 /// derive_transition!(Foo, Bar, TransitGuard::Transit);
 /// // Generates
 /// impl Transition<Bar> for Bar {
@@ -365,7 +365,7 @@ pub fn derive_transition(input: TokenStream) -> TokenStream {
 }
 
 /// Derives an empty implementation of the state.
-/// ```ignore
+/// ```rust,ignore
 /// derive_state!(Foo);
 /// // Generates
 /// impl State for Foo {};
@@ -384,7 +384,7 @@ pub fn derive_state(input: TokenStream) -> TokenStream {
 
 /// Derives an empty transition of a transition from one state into another and allows to
 /// customise if it should always transit or never.
-/// ```ignore
+/// ```rust,ignore
 /// derive_try_transition!(Foo, Bar, TransitGuard::Transit);
 /// // Generates
 /// impl TryTransition<Bar> for Bar {
@@ -411,7 +411,7 @@ pub fn derive_try_transition(input: TokenStream) -> TokenStream {
 }
 
 /// Derives an empty implementation of the TryState.
-/// ```ignore
+/// ```rust,ignore
 /// derive_try_state!(Foo);
 /// // Generates
 /// impl TryState for Foo {};
@@ -431,7 +431,7 @@ pub fn derive_try_state(input: TokenStream) -> TokenStream {
 
 /// Derives an a implementation of the into trait for the transition if the target state does
 /// not contains any members
-/// ```ignore
+/// ```rust,ignore
 /// derive_transition_into!(Foo, Bar);
 /// // Generates
 /// impl Into<Bar> for Foo {
@@ -458,7 +458,7 @@ pub fn derive_transition_into(input: TokenStream) -> TokenStream {
 
 /// Derives an empty a implementation fo the into trait for the transition if the target state
 /// implements the ``` Default ``` trait.
-/// ```ignore
+/// ```rust,ignore
 /// derive_transition_into_default!(Foo, Bar);
 /// // Generates
 /// impl Into<Bar> for Foo {

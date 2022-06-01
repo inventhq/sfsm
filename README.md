@@ -29,7 +29,7 @@ implement the states and transition necessary to fulfill the Transition and Stat
 # Usage
 ## Normal state machine
 A state machine can be defined with the following macro call.
-```ignore
+```rust,ignore
  // Only relevant parts included.
 
  add_state_machine!(
@@ -50,7 +50,7 @@ and the according ``` Transition ``` traits.
 ## Error handling state machine
 With the ``` add_fallible_state_machine ``` macro, a state machine with intrinsic error handling can be generated. As 
 soon as the specified error occurs, the state machine immediately jumps into the error state where the error can be handled. 
-```ignore
+```rust,ignore
  // Only relevant parts included.
 
  add_fallible_state_machine!(
@@ -74,7 +74,7 @@ of the states and transitions. In the fallible state machine, the traits that ha
 In complex environments it is common to encapsulate smaller, inner state machines into larger outer ones to break down
 the complexity into more manageable parts. 
 The following code shows how a nested state machine can be built.
-```ignore
+```rust,ignore
  // Only relevant parts included.
  
  // Defines the Forward Observer top-level state machine.
@@ -128,7 +128,7 @@ This encapsulated the smaller ``` OnlineMachine ``` in the ``` Online ``` state.
 
 ## Messaging system
 Additionally, messages to be pushed into or polled from the states, can be defined.
-```ignore
+```rust,ignore
  // Only relevant parts included.
 
  add_messages!(
@@ -149,7 +149,7 @@ While debugging a state machine, especially when field debugging, it is extremel
 To use it, simply enable the desired features and add a logger function. 
 
 The following tracing modes are available as a feature:
-```ignore
+```rust,ignore
 [dependencies]
 sfsm = {
     version = "*", 
@@ -161,7 +161,7 @@ sfsm = {
 ```
 The trace features can be combined how ever desired. 
 To get the tracing to work, a logger function must be provided by using the ``` #[sfsm_trace] ``` macro like in the following code snipped where the state machine is defined: 
-```ignore
+```rust,ignore
 #[sfsm_trace]
 fn trace(log: &str) {
     println!("{}", log);

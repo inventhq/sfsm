@@ -112,7 +112,7 @@ pub mod __protected {
         /// The method must be called with the turbo fish syntax as otherwise Rust cannot figure out
         /// which implementation to call. To check if the state machine is in a given state call:
         ///
-        /// ```ignore
+        /// ```rust,ignore
         /// let is_in_state: bool = IsState::<State>::is_state(&sfsm);
         /// ```
         fn is_state(&self) -> bool;
