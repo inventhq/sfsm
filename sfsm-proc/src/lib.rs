@@ -354,7 +354,7 @@ pub fn derive_transition(input: TokenStream) -> TokenStream {
     let dst = transition.transition.dst;
     let guard = transition.guard;
     TokenStream::from(quote! {
-        impl Transition<#dst> for #src {
+        impl sfsm::Transition<#dst> for #src {
             fn guard(&self) -> TransitGuard {
                 #guard
             }
@@ -376,7 +376,7 @@ pub fn derive_state(input: TokenStream) -> TokenStream {
     let name = state.name;
     let generics = state.generics;
     TokenStream::from(quote! {
-        impl State for #name #generics {}
+        impl sfsm::State for #name #generics {}
     })
 }
 
@@ -400,7 +400,7 @@ pub fn derive_try_transition(input: TokenStream) -> TokenStream {
     let dst = transition.transition.dst;
     let guard = transition.guard;
     TokenStream::from(quote! {
-        impl TryTransition<#dst> for #src {
+        impl sfsm::TryTransition<#dst> for #src {
             fn guard(&self) -> TransitGuard {
                 #guard
             }
@@ -422,7 +422,7 @@ pub fn derive_try_state(input: TokenStream) -> TokenStream {
     let name = state.name;
     let generics = state.generics;
     TokenStream::from(quote! {
-        impl TryState for #name #generics {}
+        impl sfsm::TryState for #name #generics {}
     })
 }
 
