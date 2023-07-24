@@ -40,13 +40,13 @@ impl<'a> TransitToErrorToTokens {
                             #trace_error_state
                             let mut err_state: #error_state = state.into();
                             err_state.consume_error(err);
-                            #state_trait::#entry(&mut err_state).map_err(|err| {ExtendedSfsmError::Custom(err)})?;
+                            #state_trait::#entry(&mut err_state).map_err(|err| {sfsm::ExtendedSfsmError::Custom(err)})?;
                             return Ok(#enum_name::#error_state_entry(Some(err_state)));
                         }
                     }
                 } else {
                     quote! {
-                        #tokens.map_err(|err| {ExtendedSfsmError::Custom(err)})?;
+                        #tokens.map_err(|err| {sfsm::ExtendedSfsmError::Custom(err)})?;
                     }
                 }
             }
@@ -118,6 +118,10 @@ impl ToTokens for StateMachineToTokens<'_> {
         let sfsm_error = &self.machine.sfsm_error;
         let custom_error = &self.machine.custom_error;
 
+        let error_type = quote! {
+            #sfsm_error #custom_error
+        };
+
         let trace_start = trace::trace(trace::format_log(
             &sfsm_name.to_string(),
             "Start",
@@ -144,14 +148,14 @@ impl ToTokens for StateMachineToTokens<'_> {
                 }
             }
 
-            impl StateMachine for #sfsm_name {
+            impl sfsm::StateMachine for #sfsm_name {
                 type InitialState = #init_state;
-                type Error = #sfsm_error#custom_error;
+                type Error = #error_type;
                 type StatesEnum = #enum_name;
 
-                fn start(&mut self, mut state: Self::InitialState) -> Result<(), Self::Error> {
+                fn start(&mut self, mut state: Self::InitialState) -> ::core::result::Result<(), Self::Error> {
                     #[inline(always)]
-                    fn run_state(mut state: #init_state) -> Result<#enum_name, #sfsm_error#custom_error> {
+                    fn run_state(mut state: #init_state) -> ::core::result::Result<#enum_name, #error_type> {
                         #init_state_tokens
                         Ok(#enum_name::#init_state_entry(Some(state)))
                     }
@@ -160,7 +164,7 @@ impl ToTokens for StateMachineToTokens<'_> {
                     Ok(())
                 }
 
-                fn step(&mut self) -> Result<(), Self::Error> {
+                fn step(&mut self) -> ::core::result::Result<(), Self::Error> {
                     use #enum_name::*;
                     let ref mut e = self.states;
                     *e = match *e {
@@ -169,7 +173,7 @@ impl ToTokens for StateMachineToTokens<'_> {
                     Ok(())
                 }
 
-                fn stop(mut self) -> Result<Self::StatesEnum, Self::Error> {
+                fn stop(mut self) -> ::core::result::Result<Self::StatesEnum, Self::Error> {
                     #trace_stop
                     match self.states {
                         # ( #exits )*,
@@ -250,14 +254,9 @@ impl ToTokens for IsStateToTokens<'_> {
         let enum_name = &self.machine.enum_name;
         let sfsm_name = &self.machine.name;
         let token_steam = quote! {
-            impl IsState<#state> for #sfsm_name {
+            impl sfsm::IsState<#state> for #sfsm_name {
                 fn is_state(&self) -> bool {
-                    return match self.states {
-                        #enum_name::#state_entry(_) => {
-                            true
-                        }
-                        _ => false
-                    }
+                    matches!(self.states, #enum_name::#state_entry(_))
                 }
             }
 
@@ -306,6 +305,9 @@ impl<'a> ToTokens for StateToTokens<'a> {
         let state = &self.state;
         let sfsm_error = &self.machine.sfsm_error;
         let custom_error = &self.machine.custom_error;
+        let error_type = quote! {
+            #sfsm_error #custom_error
+        };
         let transition_checks: Vec<TransitionToTokens> = self
             .state
             .transits
@@ -333,7 +335,7 @@ impl<'a> ToTokens for StateToTokens<'a> {
         let token_steam = quote! {
                 #enum_name::#state_entry(ref mut state_option) => {
                     #[inline(always)]
-                    fn run_state(state_option: &mut Option<#state>) -> Result<#enum_name, #sfsm_error#custom_error> {
+                    fn run_state(state_option: &mut ::core::option::Option<#state>) -> ::core::result::Result<#enum_name, #error_type> {
                         let mut state = state_option.take().ok_or(#sfsm_error::Internal)?;
                         #trace_execute
                         #state_execute_tokens
@@ -355,7 +357,7 @@ impl ToTokens for State {
         let name = &self.name;
         let generics = &self.generics;
         let token_steam = quote! {
-            #name#generics
+            #name #generics
         };
 
         tokens.extend(token_steam);
@@ -434,7 +436,7 @@ impl ToTokens for TransitionToTokens<'_> {
         ));
 
         let token_steam = quote! {
-            if #transit_trait::<#target_state>::guard(&state) == TransitGuard::Transit {
+            if #transit_trait::<#target_state>::guard(&state) == sfsm::TransitGuard::Transit {
                 #exit_token_stream
                 #exit_transitions
                 #trace_exit
@@ -525,8 +527,8 @@ impl ToTokens for StateMessageToTokens<'_> {
                     &format!("{} to {}", &message.get_name_type(), &state.get_name_type()),
                 ));
                 quote! {
-                    impl PushMessage<#state, #message_name#message_args> for #sfsm_name {
-                        fn push_message(&mut self, message: #message_name#message_args) -> Result<(), MessageError<#message_name#message_args>> {
+                    impl sfsm::PushMessage<#state, #message_name #message_args> for #sfsm_name {
+                        fn push_message(&mut self, message: #message_name #message_args) -> ::core::result::Result<(), sfsm::MessageError<#message_name #message_args>> {
                             match self.states {
                                 #enum_name::#enum_entry(ref mut state_option) => {
                                     if let Some(ref mut state) = state_option {
@@ -539,7 +541,7 @@ impl ToTokens for StateMessageToTokens<'_> {
                                     // Do nothing, this will return and error at the end of the function
                                 }
                             }
-                            return Err(MessageError::StateIsNotActive(message));
+                            return Err(sfsm::MessageError::StateIsNotActive(message));
                         }
                     }
                 }
@@ -557,8 +559,8 @@ impl ToTokens for StateMessageToTokens<'_> {
                     ),
                 ));
                 quote! {
-                    impl PollMessage<#state, #message_name#message_args> for #sfsm_name {
-                        fn poll_message(&mut self) -> Result<Option<#message_name#message_args>, MessageError<()>> {
+                    impl sfsm::PollMessage<#state, #message_name #message_args> for #sfsm_name {
+                        fn poll_message(&mut self) -> ::core::result::Result<::core::option::Option<#message_name #message_args>, sfsm::MessageError<()>> {
                             match self.states {
                                 #enum_name::#enum_entry(ref mut state_option) => {
                                     if let Some(ref mut state) = state_option {
@@ -573,7 +575,7 @@ impl ToTokens for StateMessageToTokens<'_> {
                                     // Do nothing, this will return and error at the end of the function
                                 }
                             }
-                            return Err(MessageError::StateIsNotActive(()));
+                            return Err(sfsm::MessageError::StateIsNotActive(()));
                         }
                     }
                 }

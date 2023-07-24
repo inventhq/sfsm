@@ -108,15 +108,15 @@ impl Parse for Machine {
         let enum_name = Machine::enum_name(&name);
 
         let sfsm_error = quote! {
-            SfsmError
+            sfsm::SfsmError
         };
 
         let trait_definitions = TraitDefinitions {
             state_trait: quote! {
-                State
+                sfsm::State
             },
             transit_trait: quote! {
-                Transition
+                sfsm::Transition
             },
             entry: quote! {
                 entry
@@ -270,10 +270,10 @@ impl Parse for TryMachine {
         let error_type_name = error_type.error_name;
         let error_type_generics = error_type.generics;
         let custom_error = quote! {
-            <#error_type_name#error_type_generics>
+            <#error_type_name #error_type_generics>
         };
         let sfsm_error = quote! {
-            ExtendedSfsmError
+            sfsm::ExtendedSfsmError
         };
 
         let states = &(state_machine.states);
@@ -288,8 +288,8 @@ impl Parse for TryMachine {
         state_machine.sfsm_error = sfsm_error;
         state_machine.custom_error = Some(custom_error);
         state_machine.trait_definitions = TraitDefinitions {
-            state_trait: quote! {TryState},
-            transit_trait: quote! {TryTransition},
+            state_trait: quote! {sfsm::TryState},
+            transit_trait: quote! {sfsm::TryTransition},
             entry: quote! {try_entry},
             exit: quote! {try_exit},
             action: quote! {try_action},

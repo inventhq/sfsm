@@ -61,7 +61,7 @@ impl State {
         let name = &self.name;
         let generics = &self.generics;
         quote! {
-            #name#generics
+            #name #generics
         }
         .to_string()
     }
@@ -111,7 +111,7 @@ impl Message {
         let name = &self.name;
         let generics = &self.generics;
         quote! {
-            #name#generics
+            #name #generics
         }
         .to_string()
     }
