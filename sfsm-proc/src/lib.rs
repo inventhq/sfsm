@@ -1,14 +1,16 @@
 #![doc = include_str!("../README.md")]
 
+use crate::generators::{MessagesToTokens, StateMachineToTokens};
 use proc_macro::TokenStream;
 use quote::quote;
 use syn::ItemFn;
-use crate::generators::{StateMachineToTokens, MessagesToTokens};
 mod generators;
 mod parsers;
-mod types;
 mod trace;
-use crate::types::{MatchStateEntry, Machine, TryMachine, Messages, State, DeriveTransition, DeriveTransitionBase};
+mod types;
+use crate::types::{
+    DeriveTransition, DeriveTransitionBase, Machine, MatchStateEntry, Messages, State, TryMachine,
+};
 
 /// Generates a state machine from a given state machine definition.
 ///
@@ -79,11 +81,10 @@ use crate::types::{MatchStateEntry, Machine, TryMachine, Messages, State, Derive
 /// Expand the example to see more, or check out the examples folder for a more complete example.
 #[proc_macro]
 pub fn add_state_machine(input: TokenStream) -> TokenStream {
-
     let definition = syn::parse_macro_input!(input as Machine);
     let sfsm_to_tokens = StateMachineToTokens::new(&definition);
 
-    TokenStream::from(quote!{
+    TokenStream::from(quote! {
         #sfsm_to_tokens
     })
 }
@@ -187,11 +188,10 @@ pub fn add_state_machine(input: TokenStream) -> TokenStream {
 /// Expand the example to see more, or check out the examples folder for a more complete example.
 #[proc_macro]
 pub fn add_fallible_state_machine(input: TokenStream) -> TokenStream {
-
     let definition = syn::parse_macro_input!(input as TryMachine);
     let sfsm_to_tokens = StateMachineToTokens::new(&definition.state_machine);
 
-    TokenStream::from(quote!{
+    TokenStream::from(quote! {
         #sfsm_to_tokens
     })
 }
@@ -279,11 +279,10 @@ pub fn add_fallible_state_machine(input: TokenStream) -> TokenStream {
 ///```
 #[proc_macro]
 pub fn add_messages(input: TokenStream) -> TokenStream {
-
     let definition = syn::parse_macro_input!(input as Messages);
     let messages_to_tokens = MessagesToTokens::new(&definition);
 
-    TokenStream::from(quote!{
+    TokenStream::from(quote! {
         #messages_to_tokens
     })
 }
@@ -303,14 +302,13 @@ pub fn add_messages(input: TokenStream) -> TokenStream {
 /// ```
 #[proc_macro]
 pub fn match_state_entry(input: TokenStream) -> TokenStream {
-
     let match_state_entry: MatchStateEntry = syn::parse_macro_input!(input as MatchStateEntry);
     let state_entry = match_state_entry.state_entry;
     let enum_name = state_entry.enum_name;
     let state_entry = state_entry.state_entry;
     let var_name = match_state_entry.var_name;
 
-    TokenStream::from(quote!{
+    TokenStream::from(quote! {
         #enum_name::#state_entry(#var_name)
     })
 }
@@ -328,7 +326,7 @@ pub fn match_state_entry(input: TokenStream) -> TokenStream {
 pub fn sfsm_trace(_attr: TokenStream, item: TokenStream) -> TokenStream {
     let trace_function: ItemFn = syn::parse_macro_input!(item as ItemFn);
     let trace_function_ident: &proc_macro2::Ident = &trace_function.sig.ident;
-    TokenStream::from(quote!{
+    TokenStream::from(quote! {
         #trace_function
         fn __sfsm_trace(str: &str) {
             #trace_function_ident(str);
@@ -355,7 +353,7 @@ pub fn derive_transition(input: TokenStream) -> TokenStream {
     let src = transition.transition.src;
     let dst = transition.transition.dst;
     let guard = transition.guard;
-    TokenStream::from(quote!{
+    TokenStream::from(quote! {
         impl Transition<#dst> for #src {
             fn guard(&self) -> TransitGuard {
                 #guard
@@ -377,7 +375,7 @@ pub fn derive_state(input: TokenStream) -> TokenStream {
     let state: State = syn::parse_macro_input!(input as State);
     let name = state.name;
     let generics = state.generics;
-    TokenStream::from(quote!{
+    TokenStream::from(quote! {
         impl State for #name #generics {}
     })
 }
@@ -401,7 +399,7 @@ pub fn derive_try_transition(input: TokenStream) -> TokenStream {
     let src = transition.transition.src;
     let dst = transition.transition.dst;
     let guard = transition.guard;
-    TokenStream::from(quote!{
+    TokenStream::from(quote! {
         impl TryTransition<#dst> for #src {
             fn guard(&self) -> TransitGuard {
                 #guard
@@ -423,11 +421,10 @@ pub fn derive_try_state(input: TokenStream) -> TokenStream {
     let state: State = syn::parse_macro_input!(input as State);
     let name = state.name;
     let generics = state.generics;
-    TokenStream::from(quote!{
+    TokenStream::from(quote! {
         impl TryState for #name #generics {}
     })
 }
-
 
 /// Derives an a implementation of the into trait for the transition if the target state does
 /// not contains any members
@@ -447,7 +444,7 @@ pub fn derive_transition_into(input: TokenStream) -> TokenStream {
     let transition: DeriveTransitionBase = syn::parse_macro_input!(input as DeriveTransitionBase);
     let src = transition.src;
     let dst = transition.dst;
-    TokenStream::from(quote!{
+    TokenStream::from(quote! {
         impl Into<#dst> for #src {
             fn into(self) -> #dst {
                 #dst {}
@@ -474,7 +471,7 @@ pub fn derive_transition_into_default(input: TokenStream) -> TokenStream {
     let transition: DeriveTransitionBase = syn::parse_macro_input!(input as DeriveTransitionBase);
     let src = transition.src;
     let dst = transition.dst;
-    TokenStream::from(quote!{
+    TokenStream::from(quote! {
         impl Into<#dst> for #src {
             fn into(self) -> #dst {
                 #dst::default()
