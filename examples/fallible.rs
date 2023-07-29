@@ -3,7 +3,7 @@ use sfsm::*;
 // The states
 pub struct Launch {}
 pub struct WaitForLaunch {
-    boosters_started: bool
+    boosters_started: bool,
 }
 
 // The error state
@@ -14,9 +14,7 @@ pub struct HandleMalfunction {
 // Some helper functions
 impl HandleMalfunction {
     pub fn new() -> Self {
-        Self {
-            res: Ok(())
-        }
+        Self { res: Ok(()) }
     }
 }
 
@@ -24,7 +22,7 @@ impl HandleMalfunction {
 #[derive(Debug)]
 pub enum RocketMalfunction {
     BoostersWontStart,
-    BoostersFellOff
+    BoostersFellOff,
 }
 
 // Implement all the functions for the various states
@@ -49,7 +47,7 @@ impl TryState for WaitForLaunch {
             Err(RocketMalfunction::BoostersWontStart) // During the first start, the boosters did not start properly
         } else {
             println!("Everything ok. Proceed with launch");
-            Ok(())  // If the boosters have properly been started, proceed with the launch
+            Ok(()) // If the boosters have properly been started, proceed with the launch
         }
     }
 }
@@ -79,7 +77,7 @@ derive_try_transition!(HandleMalfunction, WaitForLaunch, TransitGuard::Transit);
 impl Into<WaitForLaunch> for HandleMalfunction {
     fn into(self) -> WaitForLaunch {
         WaitForLaunch {
-            boosters_started: true
+            boosters_started: true,
         }
     }
 }
@@ -91,7 +89,8 @@ impl TryState for HandleMalfunction {
     fn try_entry(&mut self) -> Result<(), Self::Error> {
         if let Err(err) = &(self.res) {
             match err {
-                RocketMalfunction::BoostersWontStart => {   // If the boosters won't start, just restart the launch.
+                RocketMalfunction::BoostersWontStart => {
+                    // If the boosters won't start, just restart the launch.
                     println!("Handle error: Turn off and restart launch");
                 }
                 RocketMalfunction::BoostersFellOff => {
@@ -137,10 +136,11 @@ fn trace(log: &str) {
 }
 
 fn run_error_example() -> Result<(), ExtendedSfsmError<RocketMalfunction>> {
-
     let mut rocket = Rocket::new();
 
-    let wait_for_launch = WaitForLaunch {boosters_started: false};
+    let wait_for_launch = WaitForLaunch {
+        boosters_started: false,
+    };
     rocket.start(wait_for_launch)?;
 
     assert!(IsState::<WaitForLaunch>::is_state(&rocket));
@@ -153,9 +153,9 @@ fn run_error_example() -> Result<(), ExtendedSfsmError<RocketMalfunction>> {
     rocket.step()?;
 
     assert!(IsState::<Launch>::is_state(&rocket));
-    let res = rocket.step();        // There is an error during the launch which causes a transition
-                                    // to the error state. The error state knows it cannot handle
-                                    // the error and thus aborts right in the entry of the error state
+    let res = rocket.step(); // There is an error during the launch which causes a transition
+                             // to the error state. The error state knows it cannot handle
+                             // the error and thus aborts right in the entry of the error state
     assert!(res.is_err());
 
     Ok(())

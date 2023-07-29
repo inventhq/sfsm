@@ -1,17 +1,20 @@
+use crate::types::{
+    DeriveTransition, DeriveTransitionBase, ErrorType, Machine, MatchStateEntry, Message,
+    MessageDir, Messages, Mode, State, StateEntry, StateMessage, TraitDefinitions, Transition,
+    TryMachine,
+};
+use proc_macro::TokenStream;
 use proc_macro2::{Ident, Span};
-use proc_macro::{TokenStream};
-use syn::{Result, AngleBracketedGenericArguments, Visibility, Attribute, Error, TypePath};
+use quote::quote;
 use syn::parse::{Parse, ParseStream, Parser};
-use syn::punctuated::{Punctuated};
+use syn::punctuated::Punctuated;
 use syn::Token;
-use quote::{quote};
-use crate::types::{State, Transition, Machine, StateEntry, MatchStateEntry, StateMessage, Messages, Message, MessageDir, ErrorType, TryMachine, Mode, TraitDefinitions, DeriveTransitionBase, DeriveTransition};
+use syn::{AngleBracketedGenericArguments, Attribute, Error, Result, TypePath, Visibility};
 
 /// Parses the name of a state and optionally a type.
 /// For example Foo or Bar<T>
 impl Parse for State {
     fn parse(input: ParseStream) -> Result<Self> {
-
         let name: Ident = input.parse()?;
 
         let generics = if input.peek(Token![<]) {
@@ -40,17 +43,13 @@ impl Parse for Transition {
         input.parse::<syn::Token![>]>()?;
         let dst: State = input.parse()?;
 
-        Ok(Self {
-            src,
-            dst
-        })
+        Ok(Self { src, dst })
     }
 }
 
 impl Machine {
     pub fn enum_name(sfsm_name: &Ident) -> Ident {
-        Ident::new(format!("{}States", sfsm_name.to_string()).as_str(),
-                   Span::call_site())
+        Ident::new(format!("{}States", sfsm_name).as_str(), Span::call_site())
     }
 }
 
@@ -58,7 +57,6 @@ impl Machine {
 /// name, Foo, [Foo, Bar], [Foo -> Bar]
 impl Parse for Machine {
     fn parse(input: ParseStream) -> Result<Self> {
-
         let attributes = input.call(Attribute::parse_outer)?;
 
         let visibility: Option<Visibility> = input.parse().ok();
@@ -79,57 +77,60 @@ impl Parse for Machine {
 
         let transition_group = input.parse::<proc_macro2::Group>()?;
         let transition_group_ts: TokenStream = transition_group.stream().into();
-        let transition_parser =
-            Punctuated::<Transition, Token![,]>::parse_terminated;
+        let transition_parser = Punctuated::<Transition, Token![,]>::parse_terminated;
         let punctuated_transitions = transition_parser.parse(transition_group_ts)?;
         let transitions: Vec<Transition> = punctuated_transitions.into_iter().collect();
 
-        let states: Vec<State> = states_names.into_iter().map(|state| {
+        let states: Vec<State> = states_names
+            .into_iter()
+            .map(|state| {
+                let transitions: Vec<State> = transitions
+                    .iter()
+                    .filter(|trans| trans.src.enum_name == state.enum_name)
+                    .map(|trans| trans.dst.clone())
+                    .collect();
 
-            let transitions: Vec<State> = (&transitions).into_iter().filter(|trans| {
-                return trans.src.enum_name == state.enum_name;
-            }).map(|trans| (*trans).dst.clone()).collect();
+                State {
+                    name: state.name,
+                    transits: transitions,
+                    generics: state.generics,
+                    enum_name: state.enum_name,
+                }
+            })
+            .collect();
 
-            State {
-                name: state.name,
-                transits: transitions,
-                generics: state.generics,
-                enum_name: state.enum_name,
-            }
-
-        }).collect();
-
-        let init = (&states).into_iter().find(|state| {
-            return init_definition.enum_name == state.enum_name;
-        }).expect("Expected to find the init state in the list of states").clone();
+        let init = states
+            .iter()
+            .find(|state| init_definition.enum_name == state.enum_name)
+            .expect("Expected to find the init state in the list of states")
+            .clone();
 
         let enum_name = Machine::enum_name(&name);
 
-        let sfsm_error = proc_macro2::TokenStream::from(quote! {
-            SfsmError
-        });
-
-        let trait_definitions = TraitDefinitions {
-            state_trait: proc_macro2::TokenStream::from(quote! {
-                State
-            }),
-            transit_trait: proc_macro2::TokenStream::from(quote! {
-                Transition
-            }),
-            entry: proc_macro2::TokenStream::from(quote! {
-                entry
-            }),
-            exit: proc_macro2::TokenStream::from(quote! {
-                exit
-            }),
-            action: proc_macro2::TokenStream::from(quote! {
-                action
-            }),
-            execute: proc_macro2::TokenStream::from(quote! {
-                execute
-            }),
+        let sfsm_error = quote! {
+            sfsm::SfsmError
         };
 
+        let trait_definitions = TraitDefinitions {
+            state_trait: quote! {
+                sfsm::State
+            },
+            transit_trait: quote! {
+                sfsm::Transition
+            },
+            entry: quote! {
+                entry
+            },
+            exit: quote! {
+                exit
+            },
+            action: quote! {
+                action
+            },
+            execute: quote! {
+                execute
+            },
+        };
 
         Ok(Self {
             attributes,
@@ -167,7 +168,7 @@ impl Parse for MatchStateEntry {
         let var_name: Ident = input.parse()?;
         Ok(Self {
             state_entry,
-            var_name
+            var_name,
         })
     }
 }
@@ -177,17 +178,13 @@ impl Parse for Message {
 
         // Only parse the generic argument if the bracket is opened and no - follows.
         // If we only checked for the < the arrow <- would trigger the parsing.
-        let generics = if input.peek(Token![<])
-            && !input.peek2(Token![-]) {
+        let generics = if input.peek(Token![<]) && !input.peek2(Token![-]) {
             input.parse::<AngleBracketedGenericArguments>().ok()
         } else {
             None
         };
 
-        Ok(Self {
-            name,
-            generics
-        })
+        Ok(Self { name, generics })
     }
 }
 
@@ -202,23 +199,27 @@ impl Parse for StateMessage {
             input.parse::<syn::Token![<-]>()?;
             MessageDir::Poll(message)
         } else {
-            return Err(Error::new(input.span(), format!("A direction must be specified with either '->' or '<-' but got '{}' instead", input)))
+            return Err(Error::new(
+                input.span(),
+                format!(
+                    "A direction must be specified with either '->' or '<-' but got '{}' instead",
+                    input
+                ),
+            ));
         };
 
         let state: State = input.parse()?;
         Ok(Self {
             message: message_dir,
-            state
+            state,
         })
     }
 }
-
 
 /// Parses the message definitions in the form of
 /// name, [M1 -> Foo, M2 <- Bar]
 impl Parse for Messages {
     fn parse(input: ParseStream) -> Result<Self> {
-
         let name: Ident = input.parse()?;
         input.parse::<syn::Token![,]>()?;
 
@@ -233,14 +234,13 @@ impl Parse for Messages {
         Ok(Self {
             name,
             enum_name,
-            messages
+            messages,
         })
     }
 }
 
 impl Parse for ErrorType {
     fn parse(input: ParseStream) -> Result<Self> {
-
         let error_name: Ident = input.parse()?;
 
         let generics = if input.peek(Token![<]) {
@@ -251,7 +251,7 @@ impl Parse for ErrorType {
 
         Ok(Self {
             error_name,
-            generics
+            generics,
         })
     }
 }
@@ -260,8 +260,8 @@ impl Parse for ErrorType {
 /// name, Foo, [Foo, Bar], [Foo -> Bar], ErrorType, ErrorState
 impl Parse for TryMachine {
     fn parse(input: ParseStream) -> Result<Self> {
-
-        let mut state_machine: Machine = input.parse().expect("Expected a state machine definition");
+        let mut state_machine: Machine =
+            input.parse().expect("Expected a state machine definition");
         input.parse::<syn::Token![,]>()?;
         let error_type: ErrorType = input.parse().expect("Expected an error type");
         input.parse::<syn::Token![,]>()?;
@@ -269,34 +269,34 @@ impl Parse for TryMachine {
 
         let error_type_name = error_type.error_name;
         let error_type_generics = error_type.generics;
-        let custom_error = proc_macro2::TokenStream::from(quote! {
-            <#error_type_name#error_type_generics>
-        });
-        let sfsm_error = proc_macro2::TokenStream::from(quote! {
-            ExtendedSfsmError
-        });
+        let custom_error = quote! {
+            <#error_type_name #error_type_generics>
+        };
+        let sfsm_error = quote! {
+            sfsm::ExtendedSfsmError
+        };
 
         let states = &(state_machine.states);
-        let error_state = (&states).into_iter().find(|state| {
-            return error_state_entry.enum_name == state.enum_name;
-        }).expect("Expected to find the error state in the list of states").clone();
+        let error_state = states
+            .iter()
+            .find(|state| error_state_entry.enum_name == state.enum_name)
+            .expect("Expected to find the error state in the list of states")
+            .clone();
 
         state_machine.mode = Mode::Fallible;
-        state_machine.error_state = Some(error_state.clone());
+        state_machine.error_state = Some(error_state);
         state_machine.sfsm_error = sfsm_error;
         state_machine.custom_error = Some(custom_error);
         state_machine.trait_definitions = TraitDefinitions {
-            state_trait: proc_macro2::TokenStream::from(quote! {TryState}),
-            transit_trait: proc_macro2::TokenStream::from(quote! {TryTransition}),
-            entry: proc_macro2::TokenStream::from(quote! {try_entry}),
-            exit: proc_macro2::TokenStream::from(quote! {try_exit}),
-            action: proc_macro2::TokenStream::from(quote! {try_action}),
-            execute: proc_macro2::TokenStream::from(quote! {try_execute}),
+            state_trait: quote! {sfsm::TryState},
+            transit_trait: quote! {sfsm::TryTransition},
+            entry: quote! {try_entry},
+            exit: quote! {try_exit},
+            action: quote! {try_action},
+            execute: quote! {try_execute},
         };
 
-        Ok(Self {
-            state_machine
-        })
+        Ok(Self { state_machine })
     }
 }
 
@@ -306,22 +306,16 @@ impl Parse for DeriveTransitionBase {
         input.parse::<syn::Token![,]>()?;
         let dst: State = input.parse()?;
 
-        Ok(Self {
-            src,
-            dst
-        })
+        Ok(Self { src, dst })
     }
 }
 
-impl<'a> Parse for DeriveTransition {
+impl Parse for DeriveTransition {
     fn parse(input: ParseStream) -> Result<Self> {
         let transition: DeriveTransitionBase = input.parse()?;
         input.parse::<syn::Token![,]>()?;
         let guard: TypePath = input.parse()?;
 
-        Ok(Self {
-            transition,
-            guard
-        })
+        Ok(Self { transition, guard })
     }
 }

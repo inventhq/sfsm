@@ -1,11 +1,11 @@
 use convert_case::{Case, Casing};
 use proc_macro2::{Ident, Span, TokenStream};
-use quote::{ToTokens, quote};
-use syn::{AngleBracketedGenericArguments, Visibility, Attribute, TypePath};
+use quote::{quote, ToTokens};
+use syn::{AngleBracketedGenericArguments, Attribute, TypePath, Visibility};
 
 pub enum Mode {
     NonFallible,
-    Fallible
+    Fallible,
 }
 
 pub struct TraitDefinitions {
@@ -51,16 +51,19 @@ impl State {
         } else {
             "".to_string()
         };
-        Ident::new(format!("{}{}State", name.to_string(), args_string).as_str(),
-                   Span::call_site())
+        Ident::new(
+            format!("{}{}State", name, args_string).as_str(),
+            Span::call_site(),
+        )
     }
 
     pub fn get_name_type(&self) -> String {
         let name = &self.name;
         let generics = &self.generics;
-        TokenStream::from(quote! {
-            #name#generics
-        }).to_string()
+        quote! {
+            #name #generics
+        }
+        .to_string()
     }
 }
 
@@ -103,14 +106,14 @@ pub struct Message {
     pub name: Ident,
 }
 
-
 impl Message {
     pub fn get_name_type(&self) -> String {
         let name = &self.name;
         let generics = &self.generics;
-        TokenStream::from(quote! {
-            #name#generics
-        }).to_string()
+        quote! {
+            #name #generics
+        }
+        .to_string()
     }
 }
 
@@ -136,12 +139,10 @@ pub struct Messages {
 
 pub struct DeriveTransitionBase {
     pub src: State,
-    pub dst: State
+    pub dst: State,
 }
 
 pub struct DeriveTransition {
     pub transition: DeriveTransitionBase,
     pub guard: TypePath,
 }
-
-
